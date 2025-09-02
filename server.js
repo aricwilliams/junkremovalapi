@@ -14,6 +14,7 @@ const { notFound } = require('./middleware/notFound');
 const jobsRoutes = require('./routes/jobs');
 const authRoutes = require('./routes/auth');
 const webhookRoutes = require('./routes/webhooks');
+const calendarRoutes = require('./routes/calendar');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -70,6 +71,7 @@ app.get('/health', (req, res) => {
 app.use('/api/v1/jobs', jobsRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/webhooks', webhookRoutes);
+app.use('/api/v1/calendar', calendarRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
