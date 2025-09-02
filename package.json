@@ -8,7 +8,17 @@
         "dev": "nodemon server.js",
         "test": "jest",
         "migrate": "node scripts/migrate.js",
-        "seed": "node scripts/seed.js"
+        "seed": "node scripts/seed.js",
+                        "test:leads": "node test-leads-api.js",
+    "migrate:leads": "node scripts/leads-migration.js",
+    "test:estimates": "node test-estimates-api.js",
+    "migrate:estimates": "node scripts/estimates-migration.js",
+    "test:fleet": "node test-fleet-api.js",
+    "migrate:fleet": "node scripts/fleet-migration.js",
+    "test:employees": "node test-employees-api.js",
+    "migrate:employees": "node scripts/employees-migration.js",
+    "test:client-portal": "node test-client-portal-api.js",
+    "migrate:client-portal": "node scripts/client-portal-migration.js"
     },
     "keywords": [
         "junk-removal",

@@ -15,6 +15,12 @@ const jobsRoutes = require('./routes/jobs');
 const authRoutes = require('./routes/auth');
 const webhookRoutes = require('./routes/webhooks');
 const calendarRoutes = require('./routes/calendar');
+const customersRoutes = require('./routes/customers');
+const leadsRoutes = require('./routes/leads');
+const estimatesRoutes = require('./routes/estimates');
+const fleetRoutes = require('./routes/fleet');
+const employeeRoutes = require('./routes/employees');
+const clientPortalRoutes = require('./routes/clientPortal');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -72,6 +78,12 @@ app.use('/api/v1/jobs', jobsRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/webhooks', webhookRoutes);
 app.use('/api/v1/calendar', calendarRoutes);
+app.use('/api/v1/customers', customersRoutes);
+app.use('/api/v1/leads', leadsRoutes);
+app.use('/api/v1/estimates', estimatesRoutes);
+app.use('/api/v1/fleet', fleetRoutes);
+app.use('/api/v1/employees', employeeRoutes);
+app.use('/api/v1/portal', clientPortalRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
