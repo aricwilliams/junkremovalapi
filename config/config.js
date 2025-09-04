@@ -9,10 +9,10 @@ module.exports = {
   // Database configuration
   database: {
     host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    name: process.env.DB_DATABASE || 'junk_removal_db',
+    port: process.env.DB_PORT || 3000,
+    user: process.env.DB_USERNAME || 'root',
+    password: process.env.DB_PASSWORD,
+    name: process.env.DB_DATABASE,
     connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 10
   },
 

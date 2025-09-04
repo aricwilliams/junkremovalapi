@@ -1,18 +1,19 @@
 const express = require('express');
-const { auth, requireRole } = require('../middleware/auth');
-const { validateRequest } = require('../middleware/validation');
-const { loginSchema, registerSchema } = require('../validations/authValidation');
-const { login, register, getProfile, updateProfile } = require('../controllers/authController');
-
 const router = express.Router();
+const { signup, login, getProfile, updateProfile } = require('../controllers/authController');
+const { auth } = require('../middleware/auth');
+const { validateSignup, validateLogin } = require('../middleware/businessValidation');
 
-// Public routes
-router.post('/login', validateRequest(loginSchema), login);
-router.post('/register', validateRequest(registerSchema), register);
+// Business signup endpoint
+router.post('/signup', validateSignup, signup);
 
-// Protected routes
-router.use(auth);
-router.get('/profile', getProfile);
-router.put('/profile', validateRequest(registerSchema), updateProfile);
+// Business login endpoint
+router.post('/login', validateLogin, login);
+
+// Get business profile (protected route)
+router.get('/profile', auth, getProfile);
+
+// Update business profile (protected route)
+router.put('/profile', auth, updateProfile);
 
 module.exports = router;

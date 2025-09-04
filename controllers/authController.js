@@ -1,217 +1,295 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
-const { query } = require('../config/database');
 const config = require('../config/config');
+const db = require('../config/database');
 
-// Helper function to create success response
-const createSuccessResponse = (message, data = null) => ({
-  success: true,
-  message,
-  data,
-  timestamp: new Date().toISOString()
-});
-
-// Helper function to create error response
-const createErrorResponse = (message, errorCode = 'INTERNAL_SERVER_ERROR', statusCode = 500) => {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  error.code = errorCode;
-  throw error;
-};
-
-// Generate JWT token
-const generateToken = (userId, email, role) => {
-  return jwt.sign(
-    { id: userId, email, role },
-    config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn }
-  );
-};
-
-// Login user
-const login = async (req, res, next) => {
+// Business signup
+const signup = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const {
+      business_name,
+      business_phone,
+      business_address,
+      business_city,
+      business_state,
+      business_zip_code,
+      owner_first_name,
+      owner_last_name,
+      owner_email,
+      owner_phone,
+      username,
+      password,
+      license_number,
+      insurance_number,
+      service_radius,
+      number_of_trucks,
+      years_in_business
+    } = req.body;
 
-    // Find user by email
-    const userSql = 'SELECT * FROM employees WHERE email = ? AND is_active = 1';
-    const users = await query(userSql, [email]);
+    // Check if business already exists
+    const existingBusiness = await db.query(
+      'SELECT id FROM businesses WHERE owner_email = ? OR username = ?',
+      [owner_email, username]
+    );
 
-    if (users.length === 0) {
-      return createErrorResponse('Invalid credentials', 'INVALID_CREDENTIALS', 401);
-    }
-
-    const user = users[0];
-
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return createErrorResponse('Invalid credentials', 'INVALID_CREDENTIALS', 401);
-    }
-
-    // Generate token
-    const token = generateToken(user.id, user.email, user.role);
-
-    // Update last login
-    const updateSql = 'UPDATE employees SET last_login = NOW() WHERE id = ?';
-    await query(updateSql, [user.id]);
-
-    const response = createSuccessResponse('Login successful', {
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        phone: user.phone
-      },
-      token
-    });
-
-    res.status(200).json(response);
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Register new user
-const register = async (req, res, next) => {
-  try {
-    const { name, email, password, role, phone } = req.body;
-
-    // Check if user already exists
-    const checkSql = 'SELECT id FROM employees WHERE email = ?';
-    const existingUsers = await query(checkSql, [email]);
-
-    if (existingUsers.length > 0) {
-      return createErrorResponse('User with this email already exists', 'USER_ALREADY_EXISTS', 409);
+    if (existingBusiness.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Business already exists with this email or username',
+        error: 'BUSINESS_EXISTS'
+      });
     }
 
     // Hash password
     const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const password_hash = await bcrypt.hash(password, saltRounds);
 
-    // Insert new user
-    const userId = uuidv4();
-    const insertSql = `
-      INSERT INTO employees (
-        id, name, email, password, role, phone, is_active, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, 1, NOW())
-    `;
+    // Insert new business
+    const result = await db.query(
+      `INSERT INTO businesses (
+        business_name, business_phone, business_address, business_city, 
+        business_state, business_zip_code, owner_first_name, owner_last_name, 
+        owner_email, owner_phone, username, password_hash, license_number, 
+        insurance_number, service_radius, number_of_trucks, years_in_business
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        business_name, business_phone, business_address, business_city,
+        business_state, business_zip_code, owner_first_name, owner_last_name,
+        owner_email, owner_phone, username, password_hash, 
+        license_number || null, insurance_number || null, 
+        service_radius || null, number_of_trucks || null, years_in_business || null
+      ]
+    );
 
-    await query(insertSql, [
-      userId,
-      name,
-      email,
-      hashedPassword,
-      role || 'crew_member',
-      phone || null
-    ]);
+    const businessId = result.insertId;
 
-    // Generate token
-    const token = generateToken(userId, email, role || 'crew_member');
+    // Get the created business (without password)
+    const newBusiness = await db.query(
+      `SELECT id, business_name, business_phone, business_address, business_city, 
+       business_state, business_zip_code, owner_first_name, owner_last_name, 
+       owner_email, owner_phone, username, user_type, status, created_at,
+       license_number, insurance_number, service_radius, number_of_trucks, 
+       years_in_business FROM businesses WHERE id = ?`,
+      [businessId]
+    );
 
-    const response = createSuccessResponse('User registered successfully', {
-      user: {
-        id: userId,
-        name,
-        email,
-        role: role || 'crew_member',
-        phone
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        id: businessId,
+        username: username,
+        email: owner_email,
+        user_type: 'business_owner',
+        business_name: business_name
       },
-      token
-    });
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
+    );
 
-    res.status(201).json(response);
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Get user profile
-const getProfile = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-
-    // Get user details
-    const userSql = 'SELECT id, name, email, role, phone, created_at, last_login FROM employees WHERE id = ?';
-    const users = await query(userSql, [userId]);
-
-    if (users.length === 0) {
-      return createErrorResponse('User not found', 'USER_NOT_FOUND', 404);
-    }
-
-    const user = users[0];
-
-    const response = createSuccessResponse('Profile retrieved successfully', {
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-        created_at: user.created_at,
-        last_login: user.last_login
+    res.status(201).json({
+      success: true,
+      message: 'Business registered successfully',
+      data: {
+        business: newBusiness[0],
+        token: token
       }
     });
 
-    res.status(200).json(response);
   } catch (error) {
+    console.error('Signup error:', error);
     next(error);
   }
 };
 
-// Update user profile
-const updateProfile = async (req, res, next) => {
+// Business login
+const login = async (req, res, next) => {
   try {
-    const userId = req.user.id;
-    const updateData = req.body;
+    const { username, password } = req.body;
 
-    // Check if user exists
-    const checkSql = 'SELECT id FROM employees WHERE id = ?';
-    const existingUser = await query(checkSql, [userId]);
+    // Find business by username or email
+    const business = await db.query(
+      `SELECT id, business_name, business_phone, business_address, business_city, 
+       business_state, business_zip_code, owner_first_name, owner_last_name, 
+       owner_email, owner_phone, username, password_hash, user_type, status, 
+       created_at, last_login, license_number, insurance_number, service_radius, 
+       number_of_trucks, years_in_business FROM businesses 
+       WHERE username = ? OR owner_email = ?`,
+      [username, username]
+    );
 
-    if (existingUser.length === 0) {
-      return createErrorResponse('User not found', 'USER_NOT_FOUND', 404);
+    if (business.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials',
+        error: 'INVALID_CREDENTIALS'
+      });
     }
 
-    // Build update query dynamically
+    const businessData = business[0];
+
+    // Check if business is active
+    if (businessData.status !== 'active' && businessData.status !== 'pending') {
+      return res.status(401).json({
+        success: false,
+        message: 'Account is not active',
+        error: 'ACCOUNT_INACTIVE'
+      });
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, businessData.password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials',
+        error: 'INVALID_CREDENTIALS'
+      });
+    }
+
+    // Update last login
+    await db.query(
+      'UPDATE businesses SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
+      [businessData.id]
+    );
+
+    // Remove password from response
+    delete businessData.password_hash;
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        id: businessData.id,
+        username: businessData.username,
+        email: businessData.owner_email,
+        user_type: businessData.user_type,
+        business_name: businessData.business_name
+      },
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
+    );
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        business: businessData,
+        token: token
+      }
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    next(error);
+  }
+};
+
+// Get business profile
+const getProfile = async (req, res, next) => {
+  try {
+    const businessId = req.user.id;
+
+    const business = await db.query(
+      `SELECT id, business_name, business_phone, business_address, business_city, 
+       business_state, business_zip_code, owner_first_name, owner_last_name, 
+       owner_email, owner_phone, username, user_type, status, created_at, 
+       last_login, license_number, insurance_number, service_radius, 
+       number_of_trucks, years_in_business FROM businesses WHERE id = ?`,
+      [businessId]
+    );
+
+    if (business.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Business not found',
+        error: 'BUSINESS_NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        business: business[0]
+      }
+    });
+
+  } catch (error) {
+    console.error('Get profile error:', error);
+    next(error);
+  }
+};
+
+// Update business profile
+const updateProfile = async (req, res, next) => {
+  try {
+    const businessId = req.user.id;
+    const updateData = req.body;
+
+    // Remove sensitive fields that shouldn't be updated via this endpoint
+    delete updateData.password_hash;
+    delete updateData.id;
+    delete updateData.created_at;
+    delete updateData.last_login;
+
+    // Build dynamic update query
+    const allowedFields = [
+      'business_name', 'business_phone', 'business_address', 'business_city',
+      'business_state', 'business_zip_code', 'owner_first_name', 'owner_last_name',
+      'owner_phone', 'license_number', 'insurance_number', 'service_radius',
+      'number_of_trucks', 'years_in_business'
+    ];
+
     const updateFields = [];
     const updateValues = [];
 
-    // Only allow updating certain fields
-    const allowedFields = ['name', 'phone'];
-    Object.keys(updateData).forEach(key => {
-      if (allowedFields.includes(key) && updateData[key] !== undefined) {
+    for (const [key, value] of Object.entries(updateData)) {
+      if (allowedFields.includes(key) && value !== undefined) {
         updateFields.push(`${key} = ?`);
-        updateValues.push(updateData[key]);
+        updateValues.push(value);
+      }
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid fields to update',
+        error: 'NO_VALID_FIELDS'
+      });
+    }
+
+    updateValues.push(businessId);
+
+    await db.query(
+      `UPDATE businesses SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      updateValues
+    );
+
+    // Get updated business data
+    const updatedBusiness = await db.query(
+      `SELECT id, business_name, business_phone, business_address, business_city, 
+       business_state, business_zip_code, owner_first_name, owner_last_name, 
+       owner_email, owner_phone, username, user_type, status, created_at, 
+       last_login, license_number, insurance_number, service_radius, 
+       number_of_trucks, years_in_business FROM businesses WHERE id = ?`,
+      [businessId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        business: updatedBusiness[0]
       }
     });
 
-    if (updateFields.length === 0) {
-      return createErrorResponse('No valid fields to update', 'NO_VALID_FIELDS_TO_UPDATE', 400);
-    }
-
-    // Add updated_at timestamp
-    updateFields.push('updated_at = NOW()');
-    updateValues.push(userId);
-
-    const updateSql = `UPDATE employees SET ${updateFields.join(', ')} WHERE id = ?`;
-    await query(updateSql, updateValues);
-
-    const response = createSuccessResponse('Profile updated successfully', {
-      updated_fields: Object.keys(updateData).filter(key => allowedFields.includes(key))
-    });
-
-    res.status(200).json(response);
   } catch (error) {
+    console.error('Update profile error:', error);
     next(error);
   }
 };
 
 module.exports = {
+  signup,
   login,
-  register,
   getProfile,
   updateProfile
 };

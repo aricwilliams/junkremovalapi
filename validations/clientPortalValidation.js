@@ -55,6 +55,9 @@ const createPortalUserSchema = Joi.object({
   username: Joi.string().alphanum().min(3).max(100).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(8).max(128).required(),
+  confirm_password: Joi.string().valid(Joi.ref('password')).required().messages({
+    'any.only': 'Passwords must match'
+  }),
   personal_info: Joi.object({
     first_name: Joi.string().max(100).required(),
     last_name: Joi.string().max(100).required(),
@@ -69,7 +72,22 @@ const createPortalUserSchema = Joi.object({
     timezone: Joi.string().default('America/New_York'),
     notification_preferences: notificationPreferencesSchema,
     communication_preferences: communicationPreferencesSchema
-  }).optional()
+  }).optional(),
+  billing_info: Joi.object({
+    billing_address: Joi.object({
+      street: Joi.string().max(255).optional(),
+      city: Joi.string().max(100).optional(),
+      state: Joi.string().max(2).optional(),
+      zip_code: Joi.string().max(10).optional(),
+      country: Joi.string().max(100).default('USA')
+    }).optional()
+  }).optional(),
+  terms_accepted: Joi.boolean().valid(true).required().messages({
+    'any.only': 'You must accept the terms and conditions'
+  }),
+  privacy_policy_accepted: Joi.boolean().valid(true).required().messages({
+    'any.only': 'You must accept the privacy policy'
+  })
 });
 
 const updatePortalUserSchema = Joi.object({

@@ -6,35 +6,69 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-const { connectDB } = require('./config/database');
 const { errorHandler } = require('./middleware/errorHandler');
 const { notFound } = require('./middleware/notFound');
 
-// Import routes
-const jobsRoutes = require('./routes/jobs');
+// Import only the routes that exist
 const authRoutes = require('./routes/auth');
-const webhookRoutes = require('./routes/webhooks');
-const calendarRoutes = require('./routes/calendar');
-const customersRoutes = require('./routes/customers');
-const leadsRoutes = require('./routes/leads');
-const estimatesRoutes = require('./routes/estimates');
-const fleetRoutes = require('./routes/fleet');
-const employeeRoutes = require('./routes/employees');
-const clientPortalRoutes = require('./routes/clientPortal');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Log environment configuration
+if (process.env.NODE_ENV !== 'production') {
+  console.log('🔧 Environment Configuration:', {
+    appName: process.env.APP_NAME || 'Node Lead API',
+    appEnv: process.env.APP_ENV || 'development',
+    appDebug: process.env.APP_DEBUG || 'false',
+    appUrl: process.env.APP_URL || 'http://localhost',
+    port: PORT,
+    dbHost: process.env.DB_HOST || 'switchyard.proxy.rlwy.net',
+    dbPort: process.env.DB_PORT || 20553,
+    dbDatabase: process.env.DB_DATABASE || 'junkremoval'
+  });
+}
 
 // Security middleware
 app.use(helmet());
 
 // CORS configuration
-app.use(cors({
+const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://yourdomain.com'] 
-    : ['http://localhost:3000', 'http://localhost:3001'],
-  credentials: true
-}));
+    : process.env.ALLOW_ALL_ORIGINS === 'true'
+      ? true  // Allow all origins in development (use with caution)
+      : [
+          'http://localhost:3000',
+          'http://localhost:3001', 
+          'http://localhost:5173',  // Vite default
+          'http://localhost:8080',  // Vue CLI default
+          'http://localhost:4200',  // Angular default
+          'http://127.0.0.1:3000',
+          'http://127.0.0.1:3001',
+          'http://127.0.0.1:5173',
+          'http://127.0.0.1:8080',
+          'http://127.0.0.1:4200'
+        ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
+// Log CORS configuration in development
+if (process.env.NODE_ENV !== 'production') {
+  console.log('🔧 CORS Configuration:', {
+    allowAllOrigins: process.env.ALLOW_ALL_ORIGINS === 'true',
+    allowedOrigins: corsOptions.origin === true ? 'ALL' : corsOptions.origin,
+    credentials: corsOptions.credentials,
+    methods: corsOptions.methods
+  });
+}
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -69,27 +103,26 @@ app.get('/health', (req, res) => {
     success: true,
     message: 'API is running',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
+    appName: process.env.APP_NAME || 'Node Lead API',
+    environment: process.env.APP_ENV || 'development',
+    debug: process.env.APP_DEBUG === 'true',
+    database: {
+      host: process.env.DB_HOST || 'switchyard.proxy.rlwy.net',
+      port: process.env.DB_PORT || 20553,
+      database: process.env.DB_DATABASE || 'junkremoval'
+    }
   });
 });
 
-// API routes
-app.use('/api/v1/jobs', jobsRoutes);
+// API routes - only include what exists
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/webhooks', webhookRoutes);
-app.use('/api/v1/calendar', calendarRoutes);
-app.use('/api/v1/customers', customersRoutes);
-app.use('/api/v1/leads', leadsRoutes);
-app.use('/api/v1/estimates', estimatesRoutes);
-app.use('/api/v1/fleet', fleetRoutes);
-app.use('/api/v1/employees', employeeRoutes);
-app.use('/api/v1/portal', clientPortalRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'Junk Removal API v1.0',
+    message: process.env.APP_NAME || 'Node Lead API v1.0',
+    environment: process.env.APP_ENV || 'development',
     documentation: '/api/v1/docs',
     timestamp: new Date().toISOString()
   });
@@ -102,15 +135,14 @@ app.use(errorHandler);
 // Start server
 const startServer = async () => {
   try {
-    // Connect to database
-    await connectDB();
-    console.log('✅ Database connected successfully');
-    
     // Start server
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📖 API Documentation: http://localhost:${PORT}/api/v1/docs`);
-      console.log(`🔍 Health Check: http://localhost:${PORT}/health`);
+      console.log(`🚀 ${process.env.APP_NAME || 'Node Lead API'} running on port ${PORT}`);
+      console.log(`🌍 Environment: ${process.env.APP_ENV || 'development'}`);
+      console.log(`🔧 Debug Mode: ${process.env.APP_DEBUG === 'true' ? 'ON' : 'OFF'}`);
+      console.log(`📖 API Documentation: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/v1/docs`);
+      console.log(`🔍 Health Check: ${process.env.APP_URL || 'http://localhost'}:${PORT}/health`);
+      console.log(`🔐 Authentication: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/v1/auth`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

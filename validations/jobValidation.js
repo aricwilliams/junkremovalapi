@@ -1,269 +1,365 @@
 const Joi = require('joi');
-const config = require('../config/config');
 
-// Base job schema
-const baseJobSchema = {
-  customer_id: Joi.string().required().messages({
-    'string.empty': 'Customer ID is required',
-    'any.required': 'Customer ID is required'
-  }),
-  customer_name: Joi.string().min(2).max(255).required().messages({
-    'string.empty': 'Customer name is required',
-    'string.min': 'Customer name must be at least 2 characters long',
-    'string.max': 'Customer name cannot exceed 255 characters',
-    'any.required': 'Customer name is required'
-  }),
-  customer_phone: Joi.string().pattern(/^[\+]?[1-9][\d]{0,15}$/).required().messages({
-    'string.empty': 'Customer phone is required',
-    'string.pattern.base': 'Customer phone must be a valid phone number',
-    'any.required': 'Customer phone is required'
-  }),
-  customer_email: Joi.string().email().required().messages({
-    'string.empty': 'Customer email is required',
-    'string.email': 'Customer email must be a valid email address',
-    'any.required': 'Customer email is required'
-  }),
-  address: Joi.string().min(5).max(500).required().messages({
-    'string.empty': 'Address is required',
-    'string.min': 'Address must be at least 5 characters long',
-    'string.max': 'Address cannot exceed 500 characters',
-    'any.required': 'Address is required'
-  }),
-  city: Joi.string().min(2).max(100).required().messages({
-    'string.empty': 'City is required',
-    'string.min': 'City must be at least 2 characters long',
-    'string.max': 'City cannot exceed 100 characters',
-    'any.required': 'City is required'
-  }),
-  state: Joi.string().length(2).pattern(/^[A-Z]{2}$/).required().messages({
-    'string.empty': 'State is required',
-    'string.length': 'State must be exactly 2 characters',
-    'string.pattern.base': 'State must be a valid 2-letter state code',
-    'any.required': 'State is required'
-  }),
-  zip_code: Joi.string().pattern(/^\d{5}(-\d{4})?$/).required().messages({
-    'string.empty': 'ZIP code is required',
-    'string.pattern.base': 'ZIP code must be a valid US ZIP code format',
-    'any.required': 'ZIP code is required'
-  }),
-  latitude: Joi.number().min(-90).max(90).optional().messages({
-    'number.min': 'Latitude must be between -90 and 90',
-    'number.max': 'Latitude must be between -90 and 90'
-  }),
-  longitude: Joi.number().min(-180).max(180).optional().messages({
-    'number.min': 'Longitude must be between -180 and 180',
-    'number.max': 'Longitude must be between -180 and 180'
-  }),
-  scheduled_date: Joi.date().min('now').required().messages({
-    'date.base': 'Scheduled date must be a valid date',
-    'date.min': 'Scheduled date cannot be in the past',
-    'any.required': 'Scheduled date is required'
-  }),
-  time_slot: Joi.string().valid(...config.timeSlots).required().messages({
-    'string.empty': 'Time slot is required',
-    'any.only': 'Time slot must be one of the available options',
-    'any.required': 'Time slot is required'
-  }),
-  estimated_hours: Joi.number().min(0.5).max(24).required().messages({
-    'number.base': 'Estimated hours must be a number',
-    'number.min': 'Estimated hours must be at least 0.5',
-    'number.max': 'Estimated hours cannot exceed 24',
-    'any.required': 'Estimated hours is required'
-  }),
-  priority: Joi.string().valid(...Object.values(config.jobPriorities)).default('medium').messages({
-    'any.only': 'Priority must be one of: low, medium, high, urgent'
-  }),
-  total_estimate: Joi.number().min(0).precision(2).required().messages({
-    'number.base': 'Total estimate must be a number',
-    'number.min': 'Total estimate cannot be negative',
-    'number.precision': 'Total estimate can have maximum 2 decimal places',
-    'any.required': 'Total estimate is required'
-  }),
-  notes: Joi.string().max(1000).optional().messages({
-    'string.max': 'Notes cannot exceed 1000 characters'
-  })
-};
-
-// Job items schema
-const jobItemSchema = Joi.object({
-  name: Joi.string().min(2).max(255).required().messages({
-    'string.empty': 'Item name is required',
-    'string.min': 'Item name must be at least 2 characters long',
-    'string.max': 'Item name cannot exceed 255 characters',
-    'any.required': 'Item name is required'
-  }),
-  category: Joi.string().min(2).max(100).required().messages({
-    'string.empty': 'Item category is required',
-    'string.min': 'Item category must be at least 2 characters long',
-    'string.max': 'Item category cannot exceed 100 characters',
-    'any.required': 'Item category is required'
-  }),
-  quantity: Joi.number().integer().min(1).default(1).messages({
-    'number.base': 'Quantity must be a number',
-    'number.integer': 'Quantity must be a whole number',
-    'number.min': 'Quantity must be at least 1'
-  }),
-  base_price: Joi.number().min(0).precision(2).required().messages({
-    'number.base': 'Base price must be a number',
-    'number.min': 'Base price cannot be negative',
-    'number.precision': 'Base price can have maximum 2 decimal places',
-    'any.required': 'Base price is required'
-  }),
-  difficulty: Joi.string().valid('easy', 'medium', 'hard').default('medium').messages({
-    'any.only': 'Difficulty must be one of: easy, medium, hard'
-  }),
-  estimated_time: Joi.number().min(0.1).max(24).required().messages({
-    'number.base': 'Estimated time must be a number',
-    'number.min': 'Estimated time must be at least 0.1 hours',
-    'number.max': 'Estimated time cannot exceed 24 hours',
-    'any.required': 'Estimated time is required'
-  }),
-  notes: Joi.string().max(500).optional().messages({
-    'string.max': 'Item notes cannot exceed 500 characters'
-  })
-});
-
-// Create job validation schema
+// Job creation validation schema
 const createJobSchema = Joi.object({
-  ...baseJobSchema,
-  items: Joi.array().items(jobItemSchema).min(1).required().messages({
-    'array.min': 'At least one item is required',
-    'any.required': 'Job items are required'
-  })
+  customer_id: Joi.number().integer().positive().required()
+    .messages({
+      'number.base': 'Customer ID must be a number',
+      'number.integer': 'Customer ID must be an integer',
+      'number.positive': 'Customer ID must be positive',
+      'any.required': 'Customer ID is required'
+    }),
+  
+  estimate_id: Joi.number().integer().positive().optional()
+    .messages({
+      'number.base': 'Estimate ID must be a number',
+      'number.integer': 'Estimate ID must be an integer',
+      'number.positive': 'Estimate ID must be positive'
+    }),
+  
+  assigned_employee_id: Joi.number().integer().positive().optional()
+    .messages({
+      'number.base': 'Employee ID must be a number',
+      'number.integer': 'Employee ID must be an integer',
+      'number.positive': 'Employee ID must be positive'
+    }),
+  
+  title: Joi.string().min(1).max(255).required()
+    .messages({
+      'string.base': 'Title must be a string',
+      'string.empty': 'Title cannot be empty',
+      'string.min': 'Title must be at least 1 character',
+      'string.max': 'Title cannot exceed 255 characters',
+      'any.required': 'Title is required'
+    }),
+  
+  description: Joi.string().max(1000).optional()
+    .messages({
+      'string.base': 'Description must be a string',
+      'string.max': 'Description cannot exceed 1000 characters'
+    }),
+  
+  scheduled_date: Joi.date().iso().required()
+    .messages({
+      'date.base': 'Scheduled date must be a valid date',
+      'date.format': 'Scheduled date must be in ISO format',
+      'any.required': 'Scheduled date is required'
+    }),
+  
+  total_cost: Joi.number().precision(2).min(0).optional()
+    .messages({
+      'number.base': 'Total cost must be a number',
+      'number.min': 'Total cost cannot be negative',
+      'number.precision': 'Total cost can have at most 2 decimal places'
+    })
 });
 
-// Update job validation schema
+// Job update validation schema
 const updateJobSchema = Joi.object({
-  customer_name: Joi.string().min(2).max(255).optional(),
-  customer_phone: Joi.string().pattern(/^[\+]?[1-9][\d]{0,15}$/).optional(),
-  customer_email: Joi.string().email().optional(),
-  address: Joi.string().min(5).max(500).optional(),
-  city: Joi.string().min(2).max(100).optional(),
-  state: Joi.string().length(2).pattern(/^[A-Z]{2}$/).optional(),
-  zip_code: Joi.string().pattern(/^\d{5}(-\d{4})?$/).optional(),
-  latitude: Joi.number().min(-90).max(90).optional(),
-  longitude: Joi.number().min(-180).max(180).optional(),
-  scheduled_date: Joi.date().min('now').optional(),
-  time_slot: Joi.string().valid(...config.timeSlots).optional(),
-  estimated_hours: Joi.number().min(0.5).max(24).optional(),
-  priority: Joi.string().valid(...Object.values(config.jobPriorities)).optional(),
-  total_estimate: Joi.number().min(0).precision(2).optional(),
-  notes: Joi.string().max(1000).optional()
+  customer_id: Joi.number().integer().positive().optional()
+    .messages({
+      'number.base': 'Customer ID must be a number',
+      'number.integer': 'Customer ID must be an integer',
+      'number.positive': 'Customer ID must be positive'
+    }),
+  
+  estimate_id: Joi.number().integer().positive().optional()
+    .messages({
+      'number.base': 'Estimate ID must be a number',
+      'number.integer': 'Estimate ID must be an integer',
+      'number.positive': 'Estimate ID must be positive'
+    }),
+  
+  assigned_employee_id: Joi.number().integer().positive().optional()
+    .messages({
+      'number.base': 'Employee ID must be a number',
+      'number.integer': 'Employee ID must be an integer',
+      'number.positive': 'Employee ID must be positive'
+    }),
+  
+  title: Joi.string().min(1).max(255).optional()
+    .messages({
+      'string.base': 'Title must be a string',
+      'string.empty': 'Title cannot be empty',
+      'string.min': 'Title must be at least 1 character',
+      'string.max': 'Title cannot exceed 255 characters'
+    }),
+  
+  description: Joi.string().max(1000).optional()
+    .messages({
+      'string.base': 'Description must be a string',
+      'string.max': 'Description cannot exceed 1000 characters'
+    }),
+  
+  scheduled_date: Joi.date().iso().optional()
+    .messages({
+      'date.base': 'Scheduled date must be a valid date',
+      'date.format': 'Scheduled date must be in ISO format'
+    }),
+  
+  completion_date: Joi.date().iso().optional()
+    .messages({
+      'date.base': 'Completion date must be a valid date',
+      'date.format': 'Completion date must be in ISO format'
+    }),
+  
+  status: Joi.string().valid('scheduled', 'in_progress', 'completed', 'cancelled').optional()
+    .messages({
+      'string.base': 'Status must be a string',
+      'any.only': 'Status must be one of: scheduled, in_progress, completed, cancelled'
+    }),
+  
+  total_cost: Joi.number().precision(2).min(0).optional()
+    .messages({
+      'number.base': 'Total cost must be a number',
+      'number.min': 'Total cost cannot be negative',
+      'number.precision': 'Total cost can have at most 2 decimal places'
+    })
 });
 
-// Update job status validation schema
-const updateJobStatusSchema = Joi.object({
-  status: Joi.string().valid(...Object.values(config.jobStatuses)).required().messages({
-    'string.empty': 'Status is required',
-    'any.only': 'Status must be one of the valid options',
-    'any.required': 'Status is required'
-  }),
-  status_notes: Joi.string().max(500).optional().messages({
-    'string.max': 'Status notes cannot exceed 500 characters'
-  }),
-  actual_start_time: Joi.date().optional().messages({
-    'date.base': 'Actual start time must be a valid date'
-  })
+// Job query parameters validation schema
+const jobQuerySchema = Joi.object({
+  status: Joi.string().valid('scheduled', 'in_progress', 'completed', 'cancelled').optional()
+    .messages({
+      'string.base': 'Status must be a string',
+      'any.only': 'Status must be one of: scheduled, in_progress, completed, cancelled'
+    }),
+  
+  page: Joi.number().integer().min(1).optional()
+    .messages({
+      'number.base': 'Page must be a number',
+      'number.integer': 'Page must be an integer',
+      'number.min': 'Page must be at least 1'
+    }),
+  
+  limit: Joi.number().integer().min(1).max(100).optional()
+    .messages({
+      'number.base': 'Limit must be a number',
+      'number.integer': 'Limit must be an integer',
+      'number.min': 'Limit must be at least 1',
+      'number.max': 'Limit cannot exceed 100'
+    }),
+  
+  business_id: Joi.number().integer().positive().optional()
+    .messages({
+      'number.base': 'Business ID must be a number',
+      'number.integer': 'Business ID must be an integer',
+      'number.positive': 'Business ID must be positive'
+    }),
+  
+  customer_id: Joi.number().integer().positive().optional()
+    .messages({
+      'number.base': 'Customer ID must be a number',
+      'number.integer': 'Customer ID must be an integer',
+      'number.positive': 'Customer ID must be positive'
+    }),
+  
+  assigned_employee_id: Joi.number().integer().positive().optional()
+    .messages({
+      'number.base': 'Employee ID must be a number',
+      'number.integer': 'Employee ID must be an integer',
+      'number.positive': 'Employee ID must be positive'
+    }),
+  
+  date_from: Joi.date().iso().optional()
+    .messages({
+      'date.base': 'Date from must be a valid date',
+      'date.format': 'Date from must be in ISO format'
+    }),
+  
+  date_to: Joi.date().iso().optional()
+    .messages({
+      'date.base': 'Date to must be a valid date',
+      'date.format': 'Date to must be in ISO format'
+    }),
+  
+  sort_by: Joi.string().valid('scheduled_date', 'completion_date', 'created_at', 'total_cost', 'status').optional()
+    .messages({
+      'string.base': 'Sort by must be a string',
+      'any.only': 'Sort by must be one of: scheduled_date, completion_date, created_at, total_cost, status'
+    }),
+  
+  sort_order: Joi.string().valid('asc', 'desc').optional()
+    .messages({
+      'string.base': 'Sort order must be a string',
+      'any.only': 'Sort order must be either asc or desc'
+    })
 });
 
-// Assign crew validation schema
-const assignCrewSchema = Joi.object({
-  crew_id: Joi.string().required().messages({
-    'string.empty': 'Crew ID is required',
-    'any.required': 'Crew ID is required'
-  }),
-  assignment_notes: Joi.string().max(500).optional().messages({
-    'string.max': 'Assignment notes cannot exceed 500 characters'
-  })
+// Job item validation schema
+const jobItemSchema = Joi.object({
+  item_name: Joi.string().min(1).max(255).required()
+    .messages({
+      'string.base': 'Item name must be a string',
+      'string.empty': 'Item name cannot be empty',
+      'string.min': 'Item name must be at least 1 character',
+      'string.max': 'Item name cannot exceed 255 characters',
+      'any.required': 'Item name is required'
+    }),
+  
+  description: Joi.string().max(500).optional()
+    .messages({
+      'string.base': 'Description must be a string',
+      'string.max': 'Description cannot exceed 500 characters'
+    }),
+  
+  quantity: Joi.number().integer().min(1).optional()
+    .messages({
+      'number.base': 'Quantity must be a number',
+      'number.integer': 'Quantity must be an integer',
+      'number.min': 'Quantity must be at least 1'
+    }),
+  
+  unit_price: Joi.number().precision(2).min(0).optional()
+    .messages({
+      'number.base': 'Unit price must be a number',
+      'number.min': 'Unit price cannot be negative',
+      'number.precision': 'Unit price can have at most 2 decimal places'
+    }),
+  
+  total_price: Joi.number().precision(2).min(0).optional()
+    .messages({
+      'number.base': 'Total price must be a number',
+      'number.min': 'Total price cannot be negative',
+      'number.precision': 'Total price can have at most 2 decimal places'
+    }),
+  
+  weight_lbs: Joi.number().precision(2).min(0).optional()
+    .messages({
+      'number.base': 'Weight must be a number',
+      'number.min': 'Weight cannot be negative',
+      'number.precision': 'Weight can have at most 2 decimal places'
+    }),
+  
+  dimensions: Joi.string().max(100).optional()
+    .messages({
+      'string.base': 'Dimensions must be a string',
+      'string.max': 'Dimensions cannot exceed 100 characters'
+    }),
+  
+  condition_notes: Joi.string().max(500).optional()
+    .messages({
+      'string.base': 'Condition notes must be a string',
+      'string.max': 'Condition notes cannot exceed 500 characters'
+    }),
+  
+  disposal_method: Joi.string().valid('landfill', 'recycle', 'donate', 'hazardous', 'other').optional()
+    .messages({
+      'string.base': 'Disposal method must be a string',
+      'any.only': 'Disposal method must be one of: landfill, recycle, donate, hazardous, other'
+    })
 });
 
-// Add item to job validation schema
-const addItemToJobSchema = jobItemSchema;
-
-// Upload photos validation schema
-const uploadPhotosSchema = Joi.object({
-  photo_type: Joi.string().valid('before', 'after').required().messages({
-    'string.empty': 'Photo type is required',
-    'any.only': 'Photo type must be either "before" or "after"',
-    'any.required': 'Photo type is required'
-  }),
-  description: Joi.string().max(200).optional().messages({
-    'string.max': 'Photo description cannot exceed 200 characters'
-  })
+// Job note validation schema
+const jobNoteSchema = Joi.object({
+  note_type: Joi.string().valid('internal', 'customer', 'crew', 'follow_up').optional()
+    .messages({
+      'string.base': 'Note type must be a string',
+      'any.only': 'Note type must be one of: internal, customer, crew, follow_up'
+    }),
+  
+  content: Joi.string().min(1).max(1000).required()
+    .messages({
+      'string.base': 'Content must be a string',
+      'string.empty': 'Content cannot be empty',
+      'string.min': 'Content must be at least 1 character',
+      'string.max': 'Content cannot exceed 1000 characters',
+      'any.required': 'Content is required'
+    }),
+  
+  is_important: Joi.boolean().optional()
+    .messages({
+      'boolean.base': 'Is important must be a boolean'
+    })
 });
 
-// Time log validation schemas
-const startTimeLogSchema = Joi.object({
-  crew_member_id: Joi.string().required().messages({
-    'string.empty': 'Crew member ID is required',
-    'any.required': 'Crew member ID is required'
-  }),
-  activity: Joi.string().min(2).max(100).required().messages({
-    'string.empty': 'Activity is required',
-    'string.min': 'Activity must be at least 2 characters long',
-    'string.max': 'Activity cannot exceed 100 characters',
-    'any.required': 'Activity is required'
-  }),
-  notes: Joi.string().max(500).optional().messages({
-    'string.max': 'Activity notes cannot exceed 500 characters'
-  })
+// Job photo validation schema
+const jobPhotoSchema = Joi.object({
+  photo_url: Joi.string().uri().max(500).required()
+    .messages({
+      'string.base': 'Photo URL must be a string',
+      'string.uri': 'Photo URL must be a valid URL',
+      'string.max': 'Photo URL cannot exceed 500 characters',
+      'any.required': 'Photo URL is required'
+    }),
+  
+  photo_type: Joi.string().valid('before', 'during', 'after', 'receipt', 'other').optional()
+    .messages({
+      'string.base': 'Photo type must be a string',
+      'any.only': 'Photo type must be one of: before, during, after, receipt, other'
+    }),
+  
+  description: Joi.string().max(500).optional()
+    .messages({
+      'string.base': 'Description must be a string',
+      'string.max': 'Description cannot exceed 500 characters'
+    })
 });
 
-const stopTimeLogSchema = Joi.object({
-  notes: Joi.string().max(500).optional().messages({
-    'string.max': 'Stop notes cannot exceed 500 characters'
-  })
-});
-
-// Notification validation schema
-const sendNotificationSchema = Joi.object({
-  type: Joi.string().valid(...Object.values(config.notificationTypes)).required().messages({
-    'string.empty': 'Notification type is required',
-    'any.only': 'Notification type must be one of the valid options',
-    'any.required': 'Notification type is required'
-  }),
-  title: Joi.string().min(2).max(100).required().messages({
-    'string.empty': 'Notification title is required',
-    'string.min': 'Notification title must be at least 2 characters long',
-    'string.max': 'Notification title cannot exceed 100 characters',
-    'any.required': 'Notification title is required'
-  }),
-  message: Joi.string().min(2).max(500).required().messages({
-    'string.empty': 'Notification message is required',
-    'string.min': 'Notification message must be at least 2 characters long',
-    'string.max': 'Notification message cannot exceed 500 characters',
-    'any.required': 'Notification message is required'
-  }),
-  recipients: Joi.array().items(Joi.string().valid('customer', 'crew')).min(1).required().messages({
-    'array.min': 'At least one recipient is required',
-    'any.required': 'Recipients are required'
-  }),
-  send_email: Joi.boolean().default(true),
-  send_sms: Joi.boolean().default(false)
-});
-
-// Query parameters validation schema
-const getJobsQuerySchema = Joi.object({
-  page: Joi.number().integer().min(1).default(1),
-  limit: Joi.number().integer().min(1).max(100).default(20),
-  status: Joi.string().valid(...Object.values(config.jobStatuses)).optional(),
-  customer_id: Joi.string().optional(),
-  crew_id: Joi.string().optional(),
-  date_from: Joi.date().optional(),
-  date_to: Joi.date().optional(),
-  sort_by: Joi.string().valid('scheduled_date', 'created_at', 'priority', 'total_estimate').default('scheduled_date'),
-  sort_order: Joi.string().valid('asc', 'desc').default('desc')
+// Job time log validation schema
+const jobTimeLogSchema = Joi.object({
+  employee_id: Joi.number().integer().positive().required()
+    .messages({
+      'number.base': 'Employee ID must be a number',
+      'number.integer': 'Employee ID must be an integer',
+      'number.positive': 'Employee ID must be positive',
+      'any.required': 'Employee ID is required'
+    }),
+  
+  activity_type: Joi.string().valid('travel', 'setup', 'work', 'cleanup', 'travel_return').required()
+    .messages({
+      'string.base': 'Activity type must be a string',
+      'any.only': 'Activity type must be one of: travel, setup, work, cleanup, travel_return',
+      'any.required': 'Activity type is required'
+    }),
+  
+  start_time: Joi.date().iso().required()
+    .messages({
+      'date.base': 'Start time must be a valid date',
+      'date.format': 'Start time must be in ISO format',
+      'any.required': 'Start time is required'
+    }),
+  
+  end_time: Joi.date().iso().optional()
+    .messages({
+      'date.base': 'End time must be a valid date',
+      'date.format': 'End time must be in ISO format'
+    }),
+  
+  duration_minutes: Joi.number().integer().min(0).optional()
+    .messages({
+      'number.base': 'Duration must be a number',
+      'number.integer': 'Duration must be an integer',
+      'number.min': 'Duration cannot be negative'
+    }),
+  
+  notes: Joi.string().max(500).optional()
+    .messages({
+      'string.base': 'Notes must be a string',
+      'string.max': 'Notes cannot exceed 500 characters'
+    }),
+  
+  location_latitude: Joi.number().min(-90).max(90).optional()
+    .messages({
+      'number.base': 'Latitude must be a number',
+      'number.min': 'Latitude must be between -90 and 90',
+      'number.max': 'Latitude must be between -90 and 90'
+    }),
+  
+  location_longitude: Joi.number().min(-180).max(180).optional()
+    .messages({
+      'number.base': 'Longitude must be a number',
+      'number.min': 'Longitude must be between -180 and 180',
+      'number.max': 'Longitude must be between -180 and 180'
+    })
 });
 
 module.exports = {
   createJobSchema,
   updateJobSchema,
-  updateJobStatusSchema,
-  assignCrewSchema,
-  addItemToJobSchema,
-  uploadPhotosSchema,
-  startTimeLogSchema,
-  stopTimeLogSchema,
-  sendNotificationSchema,
-  getJobsQuerySchema
+  jobQuerySchema,
+  jobItemSchema,
+  jobNoteSchema,
+  jobPhotoSchema,
+  jobTimeLogSchema
 };
