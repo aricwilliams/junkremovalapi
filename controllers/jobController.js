@@ -78,7 +78,7 @@ const getJobs = async (req, res, next) => {
         e.email as employee_email,
         e.phone as employee_phone,
         e.job_title as employee_job_title,
-        est.title as estimate_title,
+        est.full_name as estimate_title,
         est.amount as estimate_amount,
         est.status as estimate_status
       FROM jobs j
@@ -176,7 +176,7 @@ const getJob = async (req, res, next) => {
         e.email as employee_email,
         e.phone as employee_phone,
         e.job_title as employee_job_title,
-        est.title as estimate_title,
+        est.full_name as estimate_title,
         est.amount as estimate_amount,
         est.status as estimate_status
       FROM jobs j

@@ -6,7 +6,8 @@ const getEstimates = async (req, res, next) => {
     const businessId = req.user.id;
     const { 
       status, 
-      customer_id, 
+      request_priority, 
+      is_new_client,
       page = 1, 
       limit = 20, 
       sort_by = 'created_at', 
@@ -14,40 +15,41 @@ const getEstimates = async (req, res, next) => {
     } = req.query;
 
     // Build WHERE clause
-    let whereClause = 'WHERE e.business_id = ?';
-    const params = [businessId];
+    let whereClause = 'WHERE 1=1'; // No business_id in estimates table, so we'll filter by existing_client_id
+    const params = [];
 
     if (status) {
-      whereClause += ' AND e.status = ?';
+      whereClause += ' AND status = ?';
       params.push(status);
     }
 
-    if (customer_id) {
-      whereClause += ' AND e.customer_id = ?';
-      params.push(customer_id);
+    if (request_priority) {
+      whereClause += ' AND request_priority = ?';
+      params.push(request_priority);
+    }
+
+    if (is_new_client !== undefined) {
+      whereClause += ' AND is_new_client = ?';
+      params.push(is_new_client === 'true');
     }
 
     // Calculate offset for pagination
     const offset = (page - 1) * limit;
 
     // Get total count
-    const countQuery = `
-      SELECT COUNT(*) as total 
-      FROM estimates e 
-      ${whereClause}
-    `;
+    const countQuery = `SELECT COUNT(*) as total FROM estimates ${whereClause}`;
     const [countResult] = await db.query(countQuery, params);
     const totalItems = countResult[0].total;
 
-    // Get estimates with customer info
+    // Get estimates with customer info (if existing client)
     const estimatesQuery = `
       SELECT 
         e.*,
-        c.name as customer_name,
-        c.email as customer_email,
-        c.phone as customer_phone
+        c.name as existing_customer_name,
+        c.email as existing_customer_email,
+        c.phone as existing_customer_phone
       FROM estimates e
-      LEFT JOIN customers c ON e.customer_id = c.id
+      LEFT JOIN customers c ON e.existing_client_id = c.id
       ${whereClause}
       ORDER BY e.${sort_by} ${sort_order.toUpperCase()}
       LIMIT ? OFFSET ?
@@ -79,23 +81,22 @@ const getEstimates = async (req, res, next) => {
 // Get single estimate
 const getEstimate = async (req, res, next) => {
   try {
-    const businessId = req.user.id;
     const estimateId = req.params.id;
 
     const estimate = await db.query(
       `SELECT 
         e.*,
-        c.name as customer_name,
-        c.email as customer_email,
-        c.phone as customer_phone,
-        c.address as customer_address,
-        c.city as customer_city,
-        c.state as customer_state,
-        c.zip_code as customer_zip_code
+        c.name as existing_customer_name,
+        c.email as existing_customer_email,
+        c.phone as existing_customer_phone,
+        c.address as existing_customer_address,
+        c.city as existing_customer_city,
+        c.state as existing_customer_state,
+        c.zip_code as existing_customer_zip_code
       FROM estimates e
-      LEFT JOIN customers c ON e.customer_id = c.id
-      WHERE e.id = ? AND e.business_id = ?`,
-      [estimateId, businessId]
+      LEFT JOIN customers c ON e.existing_client_id = c.id
+      WHERE e.id = ?`,
+      [estimateId]
     );
 
     if (estimate.length === 0) {
@@ -122,48 +123,113 @@ const getEstimate = async (req, res, next) => {
 // Create new estimate
 const createEstimate = async (req, res, next) => {
   try {
-    const businessId = req.user.id;
     const {
-      customer_id,
-      title,
-      amount,
-      status = 'draft',
-      sent_date,
-      expiry_date,
-      notes
+      // Client Information
+      is_new_client = true,
+      existing_client_id = null,
+      
+      // Basic Contact Information
+      full_name,
+      phone_number,
+      email_address,
+      ok_to_text = false,
+      
+      // Service Address
+      service_address,
+      gate_code = null,
+      apartment_unit = null,
+      
+      // Project Details
+      preferred_date = null,
+      preferred_time = null,
+      location_on_property,
+      approximate_volume,
+      access_considerations = null,
+      
+      // Photos & Media
+      photos = null,
+      videos = null,
+      
+      // Item Type & Condition
+      material_types,
+      approximate_item_count = null,
+      items_filled_water = false,
+      items_filled_oil_fuel = false,
+      hazardous_materials = false,
+      items_tied_bags = false,
+      oversized_items = false,
+      
+      // Safety & Hazards
+      mold_present = false,
+      pests_present = false,
+      sharp_objects = false,
+      heavy_lifting_required = false,
+      disassembly_required = false,
+      
+      // Additional Information & Services
+      additional_notes = null,
+      request_donation_pickup = false,
+      request_demolition_addon = false,
+      
+      // Follow-up & Priority
+      how_did_you_hear = null,
+      request_priority = 'standard',
+      
+      // System Fields
+      status = 'pending',
+      quote_amount = null,
+      quote_notes = null
     } = req.body;
 
-    // Verify customer belongs to this business
-    const customer = await db.query(
-      'SELECT id FROM customers WHERE id = ? AND business_id = ?',
-      [customer_id, businessId]
-    );
+    // If existing client, verify they exist
+    if (existing_client_id) {
+      const customer = await db.query(
+        'SELECT id FROM customers WHERE id = ?',
+        [existing_client_id]
+      );
 
-    if (customer.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Customer not found or does not belong to your business',
-        error: 'CUSTOMER_NOT_FOUND',
-        timestamp: new Date().toISOString()
-      });
+      if (customer.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Existing client not found',
+          error: 'CUSTOMER_NOT_FOUND',
+          timestamp: new Date().toISOString()
+        });
+      }
     }
 
     const result = await db.query(
       `INSERT INTO estimates (
-        business_id, customer_id, title, amount, status, 
-        sent_date, expiry_date, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [businessId, customer_id, title, amount, status, sent_date, expiry_date, notes]
+        is_new_client, existing_client_id, full_name, phone_number, email_address, ok_to_text,
+        service_address, gate_code, apartment_unit, preferred_date, preferred_time, 
+        location_on_property, approximate_volume, access_considerations, photos, videos,
+        material_types, approximate_item_count, items_filled_water, items_filled_oil_fuel,
+        hazardous_materials, items_tied_bags, oversized_items, mold_present, pests_present,
+        sharp_objects, heavy_lifting_required, disassembly_required, additional_notes,
+        request_donation_pickup, request_demolition_addon, how_did_you_hear, request_priority,
+        status, quote_amount, quote_notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        is_new_client, existing_client_id, full_name, phone_number, email_address, ok_to_text,
+        service_address, gate_code, apartment_unit, preferred_date, preferred_time,
+        location_on_property, approximate_volume, access_considerations, 
+        photos ? JSON.stringify(photos) : null, videos ? JSON.stringify(videos) : null,
+        JSON.stringify(material_types), approximate_item_count, items_filled_water, items_filled_oil_fuel,
+        hazardous_materials, items_tied_bags, oversized_items, mold_present, pests_present,
+        sharp_objects, heavy_lifting_required, disassembly_required, additional_notes,
+        request_donation_pickup, request_demolition_addon, how_did_you_hear, request_priority,
+        status, quote_amount, quote_notes
+      ]
     );
 
     const newEstimate = await db.query(
       `SELECT 
         e.*,
-        c.name as customer_name,
-        c.email as customer_email,
-        c.phone as customer_phone
+        c.name as existing_customer_name,
+        c.email as existing_customer_email,
+        c.phone as existing_customer_phone
       FROM estimates e
-      LEFT JOIN customers c ON e.customer_id = c.id
+      LEFT JOIN customers c ON e.existing_client_id = c.id
       WHERE e.id = ?`,
       [result.insertId]
     );
@@ -184,19 +250,17 @@ const createEstimate = async (req, res, next) => {
 // Update estimate
 const updateEstimate = async (req, res, next) => {
   try {
-    const businessId = req.user.id;
     const estimateId = req.params.id;
     const updateData = req.body;
 
     // Remove fields that shouldn't be updated
     delete updateData.id;
-    delete updateData.business_id;
     delete updateData.created_at;
 
-    // Check if estimate exists and belongs to business
+    // Check if estimate exists
     const existingEstimate = await db.query(
-      'SELECT id FROM estimates WHERE id = ? AND business_id = ?',
-      [estimateId, businessId]
+      'SELECT id FROM estimates WHERE id = ?',
+      [estimateId]
     );
 
     if (existingEstimate.length === 0) {
@@ -208,17 +272,17 @@ const updateEstimate = async (req, res, next) => {
       });
     }
 
-    // If customer_id is being updated, verify it belongs to business
-    if (updateData.customer_id) {
+    // If existing_client_id is being updated, verify it exists
+    if (updateData.existing_client_id) {
       const customer = await db.query(
-        'SELECT id FROM customers WHERE id = ? AND business_id = ?',
-        [updateData.customer_id, businessId]
+        'SELECT id FROM customers WHERE id = ?',
+        [updateData.existing_client_id]
       );
 
       if (customer.length === 0) {
         return res.status(400).json({
           success: false,
-          message: 'Customer not found or does not belong to your business',
+          message: 'Existing client not found',
           error: 'CUSTOMER_NOT_FOUND',
           timestamp: new Date().toISOString()
         });
@@ -227,8 +291,14 @@ const updateEstimate = async (req, res, next) => {
 
     // Build dynamic update query
     const allowedFields = [
-      'customer_id', 'title', 'amount', 'status', 
-      'sent_date', 'expiry_date', 'notes'
+      'is_new_client', 'existing_client_id', 'full_name', 'phone_number', 'email_address', 'ok_to_text',
+      'service_address', 'gate_code', 'apartment_unit', 'preferred_date', 'preferred_time',
+      'location_on_property', 'approximate_volume', 'access_considerations', 'photos', 'videos',
+      'material_types', 'approximate_item_count', 'items_filled_water', 'items_filled_oil_fuel',
+      'hazardous_materials', 'items_tied_bags', 'oversized_items', 'mold_present', 'pests_present',
+      'sharp_objects', 'heavy_lifting_required', 'disassembly_required', 'additional_notes',
+      'request_donation_pickup', 'request_demolition_addon', 'how_did_you_hear', 'request_priority',
+      'status', 'quote_amount', 'quote_notes'
     ];
 
     const updateFields = [];
@@ -237,7 +307,13 @@ const updateEstimate = async (req, res, next) => {
     for (const [key, value] of Object.entries(updateData)) {
       if (allowedFields.includes(key) && value !== undefined) {
         updateFields.push(`${key} = ?`);
-        updateValues.push(value);
+        
+        // Handle JSON fields
+        if (key === 'photos' || key === 'videos' || key === 'material_types') {
+          updateValues.push(value ? JSON.stringify(value) : null);
+        } else {
+          updateValues.push(value);
+        }
       }
     }
 
@@ -260,11 +336,11 @@ const updateEstimate = async (req, res, next) => {
     const updatedEstimate = await db.query(
       `SELECT 
         e.*,
-        c.name as customer_name,
-        c.email as customer_email,
-        c.phone as customer_phone
+        c.name as existing_customer_name,
+        c.email as existing_customer_email,
+        c.phone as existing_customer_phone
       FROM estimates e
-      LEFT JOIN customers c ON e.customer_id = c.id
+      LEFT JOIN customers c ON e.existing_client_id = c.id
       WHERE e.id = ?`,
       [estimateId]
     );
@@ -285,13 +361,12 @@ const updateEstimate = async (req, res, next) => {
 // Delete estimate
 const deleteEstimate = async (req, res, next) => {
   try {
-    const businessId = req.user.id;
     const estimateId = req.params.id;
 
-    // Check if estimate exists and belongs to business
+    // Check if estimate exists
     const existingEstimate = await db.query(
-      'SELECT id FROM estimates WHERE id = ? AND business_id = ?',
-      [estimateId, businessId]
+      'SELECT id FROM estimates WHERE id = ?',
+      [estimateId]
     );
 
     if (existingEstimate.length === 0) {
