@@ -11,6 +11,10 @@ const { notFound } = require('./middleware/notFound');
 
 // Import only the routes that exist
 const authRoutes = require('./routes/auth');
+const customerRoutes = require('./routes/customers');
+const employeeRoutes = require('./routes/employees');
+const estimateRoutes = require('./routes/estimates');
+const jobRoutes = require('./routes/jobs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -116,6 +120,10 @@ app.get('/health', (req, res) => {
 
 // API routes - only include what exists
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/customers', customerRoutes);
+app.use('/api/v1/employees', employeeRoutes);
+app.use('/api/v1/estimates', estimateRoutes);
+app.use('/api/v1/jobs', jobRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -143,6 +151,10 @@ const startServer = async () => {
       console.log(`📖 API Documentation: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/v1/docs`);
       console.log(`🔍 Health Check: ${process.env.APP_URL || 'http://localhost'}:${PORT}/health`);
       console.log(`🔐 Authentication: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/v1/auth`);
+      console.log(`👥 Customers: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/v1/customers`);
+      console.log(`👷 Employees: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/v1/employees`);
+      console.log(`💰 Estimates: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/v1/estimates`);
+      console.log(`💼 Jobs: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/v1/jobs`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
