@@ -3,68 +3,69 @@ const db = require('../config/database');
 // Get all customers for the authenticated business
 const getCustomers = async (req, res, next) => {
   try {
-    const businessId = req.user.id;
-    const { 
-      status, 
-      customer_type, 
-      page = 1, 
-      limit = 20, 
-      sort_by = 'created_at', 
-      sort_order = 'desc' 
+    const businessId = req.user?.business_id ?? req.user.id;
+
+    const {
+      status,
+      customer_type,
+      page = 1,
+      limit = 20,
+      sort_by = 'created_at',
+      sort_order = 'desc'
     } = req.query;
 
-    // Build WHERE clause
+    const allowedSort = ['created_at','updated_at','name','email','phone','id','city','state','customer_type','status'];
+    const sortBy = allowedSort.includes(String(sort_by)) ? sort_by : 'created_at';
+    const sortOrder = ['asc','desc'].includes(String(sort_order).toLowerCase())
+      ? sort_order.toUpperCase()
+      : 'DESC';
+
+    const p = Math.max(1, Number.parseInt(page, 10) || 1);
+    const l = Math.min(200, Math.max(1, Number.parseInt(limit, 10) || 20));
+    const offset = (p - 1) * l;
+
     let whereClause = 'WHERE business_id = ?';
-    const params = [businessId];
+    const whereParams = [businessId];
 
-    if (status) {
-      whereClause += ' AND status = ?';
-      params.push(status);
-    }
+    if (status)         { whereClause += ' AND status = ?';         whereParams.push(status); }
+    if (customer_type)  { whereClause += ' AND customer_type = ?';  whereParams.push(customer_type); }
 
-    if (customer_type) {
-      whereClause += ' AND customer_type = ?';
-      params.push(customer_type);
-    }
+    // count
+    const countSql = `SELECT COUNT(*) AS total FROM customers ${whereClause}`;
+    const countRows = await db.query(countSql, whereParams);
+    const total = countRows[0]?.total ?? 0;
 
-    // Calculate offset for pagination
-    const offset = (page - 1) * limit;
-
-    // Get total count
-    const countQuery = `SELECT COUNT(*) as total FROM customers ${whereClause}`;
-    const [countResult] = await db.query(countQuery, params);
-    const totalItems = countResult[0].total;
-
-    // Get customers with pagination
-    const customersQuery = `
-      SELECT * FROM customers 
-      ${whereClause} 
-      ORDER BY ${sort_by} ${sort_order.toUpperCase()} 
-      LIMIT ? OFFSET ?
+    // data (inline LIMIT/OFFSET after sanitizing)
+    const dataSql = `
+      SELECT *
+      FROM customers
+      ${whereClause}
+      ORDER BY ${sortBy} ${sortOrder}
+      LIMIT ${l} OFFSET ${offset}
     `;
-    params.push(parseInt(limit), offset);
-    
-    const customers = await db.query(customersQuery, params);
+    const rows = await db.query(dataSql, whereParams);
 
     res.json({
       success: true,
       data: {
-        customers,
+        customers: rows,
         pagination: {
-          current_page: parseInt(page),
-          total_pages: Math.ceil(totalItems / limit),
-          total_items: totalItems,
-          items_per_page: parseInt(limit)
+          current_page: p,
+          items_per_page: l,
+          total_items: total,
+          total_pages: Math.ceil(total / l),
         }
       },
       timestamp: new Date().toISOString()
     });
-
-  } catch (error) {
-    console.error('Get customers error:', error);
-    next(error);
+  } catch (err) {
+    console.error('Get customers error:', err);
+    next(err);
   }
 };
+
+
+
 
 // Get single customer
 const getCustomer = async (req, res, next) => {
