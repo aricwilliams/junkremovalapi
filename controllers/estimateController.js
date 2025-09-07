@@ -14,35 +14,42 @@ const getEstimates = async (req, res, next) => {
       sort_order = 'desc' 
     } = req.query;
 
-    // Build WHERE clause
+    // Validate sort_by to prevent SQL injection
+    const allowedSort = ['created_at', 'updated_at', 'id', 'status', 'request_priority', 'estimated_value', 'is_new_client'];
+    const sortBy = allowedSort.includes(String(sort_by)) ? sort_by : 'created_at';
+    const sortOrder = ['asc','desc'].includes(String(sort_order).toLowerCase()) ? sort_order.toUpperCase() : 'DESC';
+
+    // Parse and validate pagination parameters
+    const p = Math.max(1, Number.parseInt(page, 10) || 1);
+    const l = Math.min(200, Math.max(1, Number.parseInt(limit, 10) || 20));
+    const offset = (p - 1) * l;
+
+    // Build WHERE clause and params
     let whereClause = 'WHERE 1=1'; // No business_id in estimates table, so we'll filter by existing_client_id
-    const params = [];
+    const whereParams = [];
 
     if (status) {
       whereClause += ' AND status = ?';
-      params.push(status);
+      whereParams.push(status);
     }
 
     if (request_priority) {
       whereClause += ' AND request_priority = ?';
-      params.push(request_priority);
+      whereParams.push(request_priority);
     }
 
     if (is_new_client !== undefined) {
       whereClause += ' AND is_new_client = ?';
-      params.push(is_new_client === 'true');
+      whereParams.push(is_new_client === 'true');
     }
 
-    // Calculate offset for pagination
-    const offset = (page - 1) * limit;
-
     // Get total count
-    const countQuery = `SELECT COUNT(*) as total FROM estimates ${whereClause}`;
-    const [countResult] = await db.query(countQuery, params);
-    const totalItems = countResult[0].total;
+    const countSql = `SELECT COUNT(*) AS total FROM estimates ${whereClause}`;
+    const countRows = await db.query(countSql, whereParams);
+    const total = countRows[0]?.total ?? 0;
 
-    // Get estimates with customer info (if existing client)
-    const estimatesQuery = `
+    // Get estimates data - inline LIMIT/OFFSET after sanitizing
+    const dataSql = `
       SELECT 
         e.*,
         c.name as existing_customer_name,
@@ -51,30 +58,28 @@ const getEstimates = async (req, res, next) => {
       FROM estimates e
       LEFT JOIN customers c ON e.existing_client_id = c.id
       ${whereClause}
-      ORDER BY e.${sort_by} ${sort_order.toUpperCase()}
-      LIMIT ? OFFSET ?
+      ORDER BY e.${sortBy} ${sortOrder}
+      LIMIT ${l} OFFSET ${offset}
     `;
-    params.push(parseInt(limit), offset);
-    
-    const estimates = await db.query(estimatesQuery, params);
+    const rows = await db.query(dataSql, whereParams);
 
     res.json({
       success: true,
       data: {
-        estimates,
+        estimates: rows,
         pagination: {
-          current_page: parseInt(page),
-          total_pages: Math.ceil(totalItems / limit),
-          total_items: totalItems,
-          items_per_page: parseInt(limit)
+          current_page: p,
+          items_per_page: l,
+          total_items: total,
+          total_pages: Math.ceil(total / l),
         }
       },
       timestamp: new Date().toISOString()
     });
 
-  } catch (error) {
-    console.error('Get estimates error:', error);
-    next(error);
+  } catch (err) {
+    console.error('Get estimates error:', err);
+    next(err);
   }
 };
 

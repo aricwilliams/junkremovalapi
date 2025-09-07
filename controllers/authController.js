@@ -287,9 +287,62 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
+// Reset password
+const resetPassword = async (req, res, next) => {
+  try {
+    const { username, new_password } = req.body;
+
+    // Find business by username or email
+    const business = await db.query(
+      'SELECT id, username, owner_email, status FROM businesses WHERE username = ? OR owner_email = ?',
+      [username, username]
+    );
+
+    if (business.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        error: 'USER_NOT_FOUND'
+      });
+    }
+
+    const businessData = business[0];
+
+    // Check if business is active
+    if (businessData.status !== 'active' && businessData.status !== 'pending') {
+      return res.status(401).json({
+        success: false,
+        message: 'Account is not active',
+        error: 'ACCOUNT_INACTIVE'
+      });
+    }
+
+    // Hash new password
+    const saltRounds = 12;
+    const password_hash = await bcrypt.hash(new_password, saltRounds);
+
+    // Update password in database
+    await db.query(
+      'UPDATE businesses SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [password_hash, businessData.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   signup,
   login,
   getProfile,
-  updateProfile
+  updateProfile,
+  resetPassword
 };

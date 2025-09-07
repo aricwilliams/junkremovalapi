@@ -113,6 +113,20 @@ const loginSchema = Joi.object({
   })
 }).unknown(true);
 
+// Password reset validation schema
+const resetPasswordSchema = Joi.object({
+  username: Joi.string().required().messages({
+    'string.empty': 'Username or email is required',
+    'any.required': 'Username or email is required'
+  }),
+  new_password: Joi.string().min(8).max(128).required().messages({
+    'string.empty': 'New password is required',
+    'string.min': 'New password must be at least 8 characters long',
+    'string.max': 'New password cannot exceed 128 characters',
+    'any.required': 'New password is required'
+  })
+}).unknown(true);
+
 // Validation middleware
 const validateSignup = (req, res, next) => {
   const { error } = signupSchema.validate(req.body, { abortEarly: false });
@@ -152,9 +166,31 @@ const validateLogin = (req, res, next) => {
   next();
 };
 
+const validateResetPassword = (req, res, next) => {
+  const { error } = resetPasswordSchema.validate(req.body, { abortEarly: false });
+  
+  if (error) {
+    const errors = error.details.map(detail => ({
+      field: detail.path.join('.'),
+      message: detail.message
+    }));
+    
+    return res.status(400).json({
+      success: false,
+      message: 'Validation failed',
+      errors: errors,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  next();
+};
+
 module.exports = {
   signupSchema,
   loginSchema,
+  resetPasswordSchema,
   validateSignup,
-  validateLogin
+  validateLogin,
+  validateResetPassword
 };
