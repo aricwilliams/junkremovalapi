@@ -65,7 +65,7 @@ const estimateSchema = Joi.object({
     'string.max': 'Approximate volume cannot exceed 100 characters',
     'any.required': 'Approximate volume is required'
   }),
-  access_considerations: Joi.string().max(1000).optional().allow('').messages({
+  access_considerations: Joi.string().max(1000).optional().allow('', null).messages({
     'string.max': 'Access considerations cannot exceed 1000 characters'
   }),
   
@@ -83,7 +83,7 @@ const estimateSchema = Joi.object({
     'array.min': 'At least one material type must be selected',
     'any.required': 'Material types are required'
   }),
-  approximate_item_count: Joi.string().max(255).optional().allow('').messages({
+  approximate_item_count: Joi.string().max(255).optional().allow('', null).messages({
     'string.max': 'Approximate item count cannot exceed 255 characters'
   }),
   items_filled_water: Joi.boolean().optional().messages({
@@ -145,6 +145,10 @@ const estimateSchema = Joi.object({
   quote_amount: Joi.number().precision(2).min(0).optional().allow(null).messages({
     'number.base': 'Quote amount must be a number',
     'number.min': 'Quote amount must be greater than or equal to 0'
+  }),
+  amount: Joi.number().precision(2).min(0).optional().allow(null).messages({
+    'number.base': 'Amount must be a number',
+    'number.min': 'Amount must be greater than or equal to 0'
   }),
   quote_notes: Joi.string().max(1000).optional().allow('').messages({
     'string.max': 'Quote notes cannot exceed 1000 characters'

@@ -183,6 +183,7 @@ const createEstimate = async (req, res, next) => {
       // System Fields
       status = 'pending',
       quote_amount = null,
+      amount = null,
       quote_notes = null
     } = req.body;
 
@@ -212,8 +213,8 @@ const createEstimate = async (req, res, next) => {
         hazardous_materials, items_tied_bags, oversized_items, mold_present, pests_present,
         sharp_objects, heavy_lifting_required, disassembly_required, additional_notes,
         request_donation_pickup, request_demolition_addon, how_did_you_hear, request_priority,
-        status, quote_amount, quote_notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        status, quote_amount, amount, quote_notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         is_new_client, existing_client_id, full_name, phone_number, email_address, ok_to_text,
         service_address, gate_code, apartment_unit, preferred_date, preferred_time,
@@ -223,7 +224,7 @@ const createEstimate = async (req, res, next) => {
         hazardous_materials, items_tied_bags, oversized_items, mold_present, pests_present,
         sharp_objects, heavy_lifting_required, disassembly_required, additional_notes,
         request_donation_pickup, request_demolition_addon, how_did_you_hear, request_priority,
-        status, quote_amount, quote_notes
+        status, quote_amount, amount, quote_notes
       ]
     );
 
@@ -303,7 +304,7 @@ const updateEstimate = async (req, res, next) => {
       'hazardous_materials', 'items_tied_bags', 'oversized_items', 'mold_present', 'pests_present',
       'sharp_objects', 'heavy_lifting_required', 'disassembly_required', 'additional_notes',
       'request_donation_pickup', 'request_demolition_addon', 'how_did_you_hear', 'request_priority',
-      'status', 'quote_amount', 'quote_notes'
+      'status', 'quote_amount', 'amount', 'quote_notes'
     ];
 
     const updateFields = [];
