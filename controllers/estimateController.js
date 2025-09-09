@@ -370,11 +370,12 @@ const updateEstimateStatus = async (req, res, next) => {
     const estimateId = req.params.id;
     const { status } = req.body;
 
-    // Validate status - only allow accepted or declined (mapped from approved/denied)
-    if (!status || !['accepted', 'declined'].includes(status)) {
+    // Validate status against database enum
+    const validStatuses = ['pending', 'reviewed', 'quoted', 'accepted', 'declined', 'expired', 'need review', 'scheduled', 'in progress', 'completed', 'cancelled'];
+    if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
-        message: 'Status must be either "accepted" or "declined"',
+        message: 'Status must be one of: pending, reviewed, quoted, accepted, declined, expired, need review, scheduled, in progress, completed, cancelled',
         error: 'INVALID_STATUS',
         timestamp: new Date().toISOString()
       });

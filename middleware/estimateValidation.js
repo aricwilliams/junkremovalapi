@@ -139,8 +139,8 @@ const estimateSchema = Joi.object({
   }),
   
   // System Fields
-  status: Joi.string().valid('pending', 'reviewed', 'quoted', 'accepted', 'declined', 'expired', 'need review').optional().allow(null).messages({
-    'any.only': 'Status must be one of: pending, reviewed, quoted, accepted, declined, expired, need review'
+  status: Joi.string().valid('pending', 'reviewed', 'quoted', 'accepted', 'declined', 'expired', 'need review', 'scheduled', 'in progress', 'completed', 'cancelled').optional().allow(null).messages({
+    'any.only': 'Status must be one of: pending, reviewed, quoted, accepted, declined, expired, need review, scheduled, in progress, completed, cancelled'
   }),
   quote_amount: Joi.number().precision(2).min(0).optional().allow(null).messages({
     'number.base': 'Quote amount must be a number',
@@ -157,9 +157,9 @@ const estimateSchema = Joi.object({
 
 // Status update validation schema (only allows status field)
 const statusUpdateSchema = Joi.object({
-  status: Joi.string().valid('accepted', 'declined').required().messages({
+  status: Joi.string().valid('pending', 'reviewed', 'quoted', 'accepted', 'declined', 'expired', 'need review', 'scheduled', 'in progress', 'completed', 'cancelled').required().messages({
     'string.empty': 'Status is required',
-    'any.only': 'Status must be either "accepted" or "declined"',
+    'any.only': 'Status must be one of: pending, reviewed, quoted, accepted, declined, expired, need review, scheduled, in progress, completed, cancelled',
     'any.required': 'Status is required'
   })
 }).unknown(false); // Reject any unknown fields
