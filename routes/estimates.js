@@ -5,12 +5,16 @@ const {
   getEstimate, 
   createEstimate, 
   updateEstimate, 
+  updateEstimateStatus,
   deleteEstimate 
 } = require('../controllers/estimateController');
 const { auth } = require('../middleware/auth');
-const { validateEstimate } = require('../middleware/estimateValidation');
+const { validateEstimate, validateStatusUpdate } = require('../middleware/estimateValidation');
 
-// All routes require authentication
+// Unauthenticated route for status updates
+router.patch('/:id/status', validateStatusUpdate, updateEstimateStatus);
+
+// All other routes require authentication
 router.use(auth);
 
 // Estimate routes

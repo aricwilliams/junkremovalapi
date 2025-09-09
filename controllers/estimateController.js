@@ -364,6 +364,69 @@ const updateEstimate = async (req, res, next) => {
   }
 };
 
+// Update estimate status (unauthenticated endpoint)
+const updateEstimateStatus = async (req, res, next) => {
+  try {
+    const estimateId = req.params.id;
+    const { status } = req.body;
+
+    // Validate status - only allow accepted or declined (mapped from approved/denied)
+    if (!status || !['accepted', 'declined'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status must be either "accepted" or "declined"',
+        error: 'INVALID_STATUS',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Check if estimate exists
+    const existingEstimate = await db.query(
+      'SELECT id, status FROM estimates WHERE id = ?',
+      [estimateId]
+    );
+
+    if (existingEstimate.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Estimate not found',
+        error: 'ESTIMATE_NOT_FOUND',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Update only the status field
+    await db.query(
+      'UPDATE estimates SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [status, estimateId]
+    );
+
+    // Get the updated estimate
+    const updatedEstimate = await db.query(
+      `SELECT 
+        e.*,
+        c.name as existing_customer_name,
+        c.email as existing_customer_email,
+        c.phone as existing_customer_phone
+      FROM estimates e
+      LEFT JOIN customers c ON e.existing_client_id = c.id
+      WHERE e.id = ?`,
+      [estimateId]
+    );
+
+    res.json({
+      success: true,
+      data: { estimate: updatedEstimate[0] },
+      message: 'Estimate status updated successfully',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Update estimate status error:', error);
+    next(error);
+  }
+};
+
 // Delete estimate
 const deleteEstimate = async (req, res, next) => {
   try {
@@ -418,5 +481,6 @@ module.exports = {
   getEstimate,
   createEstimate,
   updateEstimate,
+  updateEstimateStatus,
   deleteEstimate
 };
