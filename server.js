@@ -37,47 +37,29 @@ app.use(helmet());
 
 // CORS configuration
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = process.env.NODE_ENV === 'production' 
-      ? [
-          'https://junkremovalappplanner.com',
-          'https://junkremovalappplanner.com/',
-          'https://www.junkremovalappplanner.com',
-          'https://junkremovalappplanner.com/app',
-          'https://junkremovalappplanner.com/app/',
-          'https://junkremovalapi.onrender.com'
-        ]
-      : process.env.ALLOW_ALL_ORIGINS === 'true'
-        ? true  // Allow all origins in development (use with caution)
-        : [
-            'http://localhost:3000',
-            'http://localhost:3001', 
-            'http://localhost:5173',  // Vite default
-            'http://localhost:8080',  // Vue CLI default
-            'http://localhost:4200',  // Angular default
-            'http://127.0.0.1:3000',
-            'http://127.0.0.1:3001',
-            'http://127.0.0.1:5173',
-            'http://127.0.0.1:8080',
-            'http://127.0.0.1:4200'
-          ];
-    
-    // Log the origin for debugging
-    console.log('🔍 CORS Origin Check:', {
-      origin: origin,
-      allowedOrigins: allowedOrigins,
-      isAllowed: allowedOrigins === true || allowedOrigins.includes(origin)
-    });
-    
-    if (allowedOrigins === true || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: process.env.NODE_ENV === 'production' 
+    ? [
+        'https://junkremovalappplanner.com',
+        'https://junkremovalappplanner.com/',
+        'https://www.junkremovalappplanner.com',
+        'https://junkremovalappplanner.com/app',
+        'https://junkremovalappplanner.com/app/',
+        'https://junkremovalapi.onrender.com'
+      ]
+    : process.env.ALLOW_ALL_ORIGINS === 'true'
+      ? true  // Allow all origins in development (use with caution)
+      : [
+          'http://localhost:3000',
+          'http://localhost:3001', 
+          'http://localhost:5173',  // Vite default
+          'http://localhost:8080',  // Vue CLI default
+          'http://localhost:4200',  // Angular default
+          'http://127.0.0.1:3000',
+          'http://127.0.0.1:3001',
+          'http://127.0.0.1:5173',
+          'http://127.0.0.1:8080',
+          'http://127.0.0.1:4200'
+        ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -95,8 +77,14 @@ if (process.env.NODE_ENV !== 'production') {
 
 app.use(cors(corsOptions));
 
-// Handle preflight requests
-app.options('*', cors(corsOptions));
+// Handle preflight requests explicitly
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
 
 
 // Body parsing middleware
