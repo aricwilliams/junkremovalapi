@@ -38,7 +38,12 @@ app.use(helmet());
 // CORS configuration
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? true  // Allow all origins in production
+    ? [
+        'https://junkremovalappplanner.com',
+        'https://www.junkremovalappplanner.com',
+        'https://junkremovalappplanner.com/app',
+        'https://junkremovalapi.onrender.com'
+      ]
     : process.env.ALLOW_ALL_ORIGINS === 'true'
       ? true  // Allow all origins in development (use with caution)
       : [
