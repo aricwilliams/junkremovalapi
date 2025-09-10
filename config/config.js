@@ -1,9 +1,19 @@
+// Helper function to get the correct URL based on environment
+const getServerUrl = () => {
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.SERVER_URL || 'https://junkremovalapi.onrender.com';
+  }
+  return process.env.DEV_URL || 'http://localhost:3000';
+};
+
 module.exports = {
   // Server configuration
   server: {
     port: process.env.PORT || 3000,
     nodeEnv: process.env.NODE_ENV || 'development',
-    baseUrl: process.env.BASE_URL || 'http://localhost:3000'
+    baseUrl: getServerUrl(),
+    devUrl: process.env.DEV_URL || 'http://localhost:3000',
+    serverUrl: process.env.SERVER_URL || 'https://junkremovalapi.onrender.com'
   },
 
   // Database configuration
@@ -100,6 +110,6 @@ module.exports = {
     twimlAppSid: process.env.TWILIO_TWIML_APP_SID,
     messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
     fromNumber: process.env.TWILIO_FROM_NUMBER,
-    serverUrl: process.env.SERVER_URL || process.env.BASE_URL || 'http://localhost:3000'
+    serverUrl: getServerUrl()
   }
 };
