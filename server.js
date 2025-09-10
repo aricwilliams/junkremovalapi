@@ -24,6 +24,8 @@ const customerRoutes = require('./routes/customers');
 const employeeRoutes = require('./routes/employees');
 const estimateRoutes = require('./routes/estimates');
 const jobRoutes = require('./routes/jobs');
+const twilioRoutes = require('./routes/twilio');
+const callForwardingRoutes = require('./routes/callForwarding');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -106,6 +108,8 @@ app.use('/api/v1/customers', customerRoutes);
 app.use('/api/v1/employees', employeeRoutes);
 app.use('/api/v1/estimates', estimateRoutes);
 app.use('/api/v1/jobs', jobRoutes);
+app.use('/api/twilio', twilioRoutes);
+app.use('/api/call-forwarding', callForwardingRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -137,6 +141,8 @@ const startServer = async () => {
       console.log(`👷 Employees: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/v1/employees`);
       console.log(`💰 Estimates: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/v1/estimates`);
       console.log(`💼 Jobs: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/v1/jobs`);
+      console.log(`📞 Twilio: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/twilio`);
+      console.log(`📱 Call Forwarding: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/call-forwarding`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

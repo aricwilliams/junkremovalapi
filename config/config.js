@@ -88,5 +88,16 @@ module.exports = {
     SMS: 'sms',
     EMAIL: 'email',
     PUSH: 'push'
+  },
+
+  // Twilio configuration
+  twilio: {
+    accountSid: process.env.TWILIO_ACCOUNT_SID,
+    authToken: process.env.TWILIO_AUTH_TOKEN,
+    apiKey: process.env.TWILIO_API_KEY,
+    apiSecret: process.env.TWILIO_API_SECRET,
+    appSid: process.env.TWILIO_APP_SID,
+    twimlAppSid: process.env.TWILIO_TWIML_APP_SID,
+    serverUrl: process.env.SERVER_URL || process.env.BASE_URL || 'http://localhost:3000'
   }
 };
