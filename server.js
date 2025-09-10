@@ -49,27 +49,12 @@ if (process.env.NODE_ENV !== 'production') {
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    console.log('🔍 CORS check - Origin:', origin, 'Type:', typeof origin);
-    
-    // Always allow requests with no origin (API tools, direct calls, etc.)
-    if (!origin || origin === 'null' || origin === null) {
-      console.log('🔓 Allowing request with no origin (API tool/direct call)');
-      return callback(null, true);
-    }
+    // allow non-browser tools (no Origin header) like curl/postman
+    if (!origin) return callback(null, true);
 
-    // In development, allow all origins for testing
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔓 Development mode - allowing all origins');
-      return callback(null, true);
-    }
-
-    // Check allowlist for production
     if (allowlist.includes(origin)) {
-      console.log('✅ Allowing request from:', origin);
       return callback(null, true);
     }
-    
-    console.log('❌ Blocking request from:', origin);
     return callback(new Error(`CORS blocked for origin: ${origin}`), false);
   },
   credentials: true,
@@ -82,21 +67,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 // allow Express to answer preflight automatically for all routes
 app.options('*', cors(corsOptions));
-
-// Additional CORS middleware for API endpoints (more permissive)
-app.use('/api', (req, res, next) => {
-  // Set CORS headers for API endpoints
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(204);
-  } else {
-    next();
-  }
-});
 
 // THEN security headers
 app.use(helmet({
