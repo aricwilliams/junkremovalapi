@@ -49,19 +49,28 @@ if (process.env.NODE_ENV !== 'production') {
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    // allow non-browser tools (no Origin header) like curl/postman
+    // 1) No Origin header: allow (server-to-server, Twilio, curl/Postman)
     if (!origin) return callback(null, true);
 
-    if (allowlist.includes(origin)) {
+    // 2) Literal 'null' (file://, sandboxed iframes)
+    if (origin === 'null') {
+      // set to true if you want to support file:// testing
       return callback(null, true);
     }
-    return callback(new Error(`CORS blocked for origin: ${origin}`), false);
+
+    // 3) Normal browsers: enforce allowlist
+    const ok = allowlist.includes(origin);
+    if (ok) return callback(null, true);
+
+    // Don't throw; just deny CORS cleanly
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization','X-Requested-With'],
   optionsSuccessStatus: 204
 };
+
 
 // 👉 CORS FIRST
 app.use(cors(corsOptions));
