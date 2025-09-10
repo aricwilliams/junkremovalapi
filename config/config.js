@@ -98,6 +98,8 @@ module.exports = {
     apiSecret: process.env.TWILIO_API_SECRET,
     appSid: process.env.TWILIO_APP_SID,
     twimlAppSid: process.env.TWILIO_TWIML_APP_SID,
+    messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
+    fromNumber: process.env.TWILIO_FROM_NUMBER,
     serverUrl: process.env.SERVER_URL || process.env.BASE_URL || 'http://localhost:3000'
   }
 };

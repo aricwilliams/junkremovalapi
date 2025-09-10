@@ -26,6 +26,8 @@ const estimateRoutes = require('./routes/estimates');
 const jobRoutes = require('./routes/jobs');
 const twilioRoutes = require('./routes/twilio');
 const callForwardingRoutes = require('./routes/callForwarding');
+const smsRoutes = require('./routes/sms');
+const smsWebhookRoutes = require('./routes/smsWebhooks');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -110,6 +112,8 @@ app.use('/api/v1/estimates', estimateRoutes);
 app.use('/api/v1/jobs', jobRoutes);
 app.use('/api/twilio', twilioRoutes);
 app.use('/api/call-forwarding', callForwardingRoutes);
+app.use('/api/sms', smsRoutes);
+app.use('/webhooks/twilio', smsWebhookRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -143,6 +147,8 @@ const startServer = async () => {
       console.log(`💼 Jobs: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/v1/jobs`);
       console.log(`📞 Twilio: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/twilio`);
       console.log(`📱 Call Forwarding: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/call-forwarding`);
+      console.log(`💬 SMS: ${process.env.APP_URL || 'http://localhost'}:${PORT}/api/sms`);
+      console.log(`📨 SMS Webhooks: ${process.env.APP_URL || 'http://localhost'}:${PORT}/webhooks/twilio`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
