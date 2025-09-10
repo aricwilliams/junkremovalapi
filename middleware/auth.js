@@ -6,6 +6,14 @@ const auth = (req, res, next) => {
     // Get token from header
     const authHeader = req.header('Authorization');
     
+    // Debug logging
+    console.log('🔍 Auth Debug:', {
+      url: req.url,
+      method: req.method,
+      authHeader: authHeader ? `${authHeader.substring(0, 20)}...` : 'none',
+      jwtSecret: config.jwt.secret ? `${config.jwt.secret.substring(0, 10)}...` : 'none'
+    });
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       const error = new Error('Access denied. No token provided.');
       error.statusCode = 401;
@@ -15,12 +23,36 @@ const auth = (req, res, next) => {
 
     // Verify token
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    const decoded = jwt.verify(token, config.jwt.secret);
+    
+    // Additional debug logging
+    console.log('🔍 Token Debug:', {
+      tokenLength: token.length,
+      tokenStart: token.substring(0, 20) + '...',
+      secretLength: config.jwt.secret.length,
+      secretStart: config.jwt.secret.substring(0, 10) + '...'
+    });
+    
+    const decoded = jwt.verify(token, config.jwt.secret, {
+      algorithms: ['HS256']
+    });
+    
+    console.log('✅ JWT Verified Successfully:', {
+      id: decoded.id,
+      username: decoded.username,
+      user_type: decoded.user_type
+    });
     
     // Add user info to request
     req.user = decoded;
     next();
   } catch (error) {
+    console.error('❌ JWT Verification Failed:', {
+      errorName: error.name,
+      errorMessage: error.message,
+      tokenProvided: !!req.header('Authorization'),
+      secretConfigured: !!config.jwt.secret
+    });
+    
     if (error.name === 'JsonWebTokenError') {
       error.statusCode = 401;
       error.code = 'INVALID_TOKEN';

@@ -3,7 +3,7 @@ const database = require('../config/database');
 class UserPhoneNumber {
   constructor(data) {
     this.id = data.id;
-    this.user_id = data.user_id;
+    this.business_id = data.business_id;
     this.phone_number = data.phone_number;
     this.twilio_sid = data.twilio_sid;
     this.friendly_name = data.friendly_name;
@@ -23,14 +23,14 @@ class UserPhoneNumber {
     try {
       const sql = `
         INSERT INTO user_phone_numbers (
-          user_id, phone_number, twilio_sid, friendly_name, country, 
+          business_id, phone_number, twilio_sid, friendly_name, country, 
           region, locality, is_active, purchase_price, purchase_price_unit, 
           monthly_cost, capabilities
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       
       const params = [
-        data.user_id,
+        data.business_id,
         data.phone_number,
         data.twilio_sid,
         data.friendly_name,
@@ -65,7 +65,7 @@ class UserPhoneNumber {
 
   static async findByUserId(userId) {
     try {
-      const sql = 'SELECT * FROM user_phone_numbers WHERE user_id = ? ORDER BY created_at DESC';
+      const sql = 'SELECT * FROM user_phone_numbers WHERE business_id = ? ORDER BY created_at DESC';
       const results = await database.query(sql, [userId]);
       return results.map(row => new UserPhoneNumber(row));
     } catch (error) {
@@ -76,7 +76,7 @@ class UserPhoneNumber {
 
   static async findActiveByUserId(userId) {
     try {
-      const sql = 'SELECT * FROM user_phone_numbers WHERE user_id = ? AND is_active = true ORDER BY created_at DESC';
+      const sql = 'SELECT * FROM user_phone_numbers WHERE business_id = ? AND is_active = true ORDER BY created_at DESC';
       const results = await database.query(sql, [userId]);
       return results.map(row => new UserPhoneNumber(row));
     } catch (error) {
@@ -158,7 +158,7 @@ class UserPhoneNumber {
           SUM(monthly_cost) as total_monthly_cost,
           SUM(purchase_price) as total_purchase_cost
         FROM user_phone_numbers 
-        WHERE user_id = ?
+        WHERE business_id = ?
       `;
       const results = await database.query(sql, [userId]);
       return results[0];
@@ -180,7 +180,7 @@ class UserPhoneNumber {
   toJSON() {
     return {
       id: this.id,
-      user_id: this.user_id,
+      business_id: this.business_id,
       phone_number: this.phone_number,
       twilio_sid: this.twilio_sid,
       friendly_name: this.friendly_name,
@@ -191,7 +191,7 @@ class UserPhoneNumber {
       purchase_price: this.purchase_price,
       purchase_price_unit: this.purchase_price_unit,
       monthly_cost: this.monthly_cost,
-      capabilities: this.capabilities ? JSON.parse(this.capabilities) : null,
+      capabilities: this.capabilities ? (typeof this.capabilities === 'string' ? JSON.parse(this.capabilities) : this.capabilities) : null,
       created_at: this.created_at,
       updated_at: this.updated_at
     };

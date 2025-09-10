@@ -51,7 +51,7 @@ exports.buyNumber = async (req, res, next) => {
       });
 
     const phoneNumberId = await UserPhoneNumber.create({
-      user_id: userId,
+      business_id: userId,
       phone_number: purchasedNumber.phoneNumber,
       twilio_sid: purchasedNumber.sid,
       friendly_name: purchasedNumber.friendlyName || `${numberToBuy.locality || 'Unknown'} Number`,
@@ -147,7 +147,7 @@ exports.updatePhoneNumber = async (req, res, next) => {
       return res.status(404).json({ error: 'Phone number not found' });
     }
 
-    if (phoneNumber.user_id !== userId) {
+    if (phoneNumber.business_id !== userId) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -188,7 +188,7 @@ exports.releasePhoneNumber = async (req, res, next) => {
       return res.status(404).json({ error: 'Phone number not found' });
     }
 
-    if (phoneNumber.user_id !== userId) {
+    if (phoneNumber.business_id !== userId) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -354,7 +354,7 @@ exports.handleStatusCallback = async (req, res, next) => {
     if (!callLog) {
       // Try to find user by phone number
       const userPhoneNumber = await UserPhoneNumber.findByPhoneNumber(To || From);
-      const userId = userPhoneNumber ? userPhoneNumber.user_id : null;
+      const userId = userPhoneNumber ? userPhoneNumber.business_id : null;
       
       await TwilioCallLog.create({
         user_id: userId,

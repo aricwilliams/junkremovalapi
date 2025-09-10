@@ -74,17 +74,27 @@ const signup = async (req, res, next) => {
     );
 
     // Generate JWT token
-    const token = jwt.sign(
-      {
-        id: businessId,
-        username: username,
-        email: owner_email,
-        user_type: 'business_owner',
-        business_name: business_name
-      },
-      config.jwt.secret,
-      { expiresIn: config.jwt.expiresIn }
-    );
+    const payload = {
+      id: businessId,
+      username: username,
+      email: owner_email,
+      user_type: 'business_owner',
+      business_name: business_name
+    };
+    
+    const tokenOptions = { 
+      expiresIn: config.jwt.expiresIn,
+      algorithm: 'HS256'
+    };
+    
+    console.log('🔍 JWT Creation Debug (Signup):', {
+      payload: payload,
+      secretLength: config.jwt.secret.length,
+      secretStart: config.jwt.secret.substring(0, 10) + '...',
+      options: tokenOptions
+    });
+    
+    const token = jwt.sign(payload, config.jwt.secret, tokenOptions);
 
     res.status(201).json({
       success: true,
@@ -156,17 +166,27 @@ const login = async (req, res, next) => {
     delete businessData.password_hash;
 
     // Generate JWT token
-    const token = jwt.sign(
-      {
-        id: businessData.id,
-        username: businessData.username,
-        email: businessData.owner_email,
-        user_type: businessData.user_type,
-        business_name: businessData.business_name
-      },
-      config.jwt.secret,
-      { expiresIn: config.jwt.expiresIn }
-    );
+    const payload = {
+      id: businessData.id,
+      username: businessData.username,
+      email: businessData.owner_email,
+      user_type: businessData.user_type,
+      business_name: businessData.business_name
+    };
+    
+    const tokenOptions = { 
+      expiresIn: config.jwt.expiresIn,
+      algorithm: 'HS256'
+    };
+    
+    console.log('🔍 JWT Creation Debug (Login):', {
+      payload: payload,
+      secretLength: config.jwt.secret.length,
+      secretStart: config.jwt.secret.substring(0, 10) + '...',
+      options: tokenOptions
+    });
+    
+    const token = jwt.sign(payload, config.jwt.secret, tokenOptions);
 
     res.json({
       success: true,
