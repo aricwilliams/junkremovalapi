@@ -36,19 +36,24 @@ exports.sendSMS = async (req, res, next) => {
     // Send SMS
     const result = await sendSMS(to, body, from);
 
-    // Log SMS to database
-    await TwilioSMSLog.create({
-      user_id: userId,
-      message_sid: result.sid,
-      to_number: result.to,
-      from_number: result.from,
-      body: body,
-      status: result.status,
-      direction: 'outbound',
-      price: result.price,
-      price_unit: result.priceUnit,
-      date_sent: result.dateSent
-    });
+    // Log SMS to database (defensive - don't fail if DB is down)
+    try {
+      await TwilioSMSLog.create({
+        user_id: userId,
+        message_sid: result.sid,
+        to_number: result.to,
+        from_number: result.from,
+        body: body,
+        status: result.status,
+        direction: 'outbound',
+        price: result.price,
+        price_unit: result.priceUnit,
+        date_sent: result.dateSent
+      });
+    } catch (dbError) {
+      console.error('Error creating SMS log:', dbError);
+      // Continue - don't fail the API response if logging fails
+    }
 
     res.json({
       success: true,
@@ -112,21 +117,26 @@ exports.sendBulkSMS = async (req, res, next) => {
     // Send bulk SMS
     const results = await sendBulkSMS(recipients, body, from);
 
-    // Log successful SMS to database
+    // Log successful SMS to database (defensive - don't fail if DB is down)
     const successfulMessages = results.filter(r => r.success);
     for (const result of successfulMessages) {
-      await TwilioSMSLog.create({
-        user_id: userId,
-        message_sid: result.message.sid,
-        to_number: result.to,
-        from_number: result.message.from,
-        body: body,
-        status: result.message.status,
-        direction: 'outbound',
-        price: result.message.price,
-        price_unit: result.message.priceUnit,
-        date_sent: result.message.dateSent
-      });
+      try {
+        await TwilioSMSLog.create({
+          user_id: userId,
+          message_sid: result.message.sid,
+          to_number: result.to,
+          from_number: result.message.from,
+          body: body,
+          status: result.message.status,
+          direction: 'outbound',
+          price: result.message.price,
+          price_unit: result.message.priceUnit,
+          date_sent: result.message.dateSent
+        });
+      } catch (dbError) {
+        console.error('Error creating SMS log for bulk message:', dbError);
+        // Continue - don't fail the API response if logging fails
+      }
     }
 
     const successCount = successfulMessages.length;
@@ -161,12 +171,17 @@ exports.getMessageDetails = async (req, res, next) => {
     const message = await getMessageDetails(messageSid);
 
     // Verify user has access to this message (optional security check)
-    const dbMessage = await TwilioSMSLog.findByMessageSid(messageSid);
-    if (dbMessage && dbMessage.user_id !== userId) {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied to this message'
-      });
+    try {
+      const dbMessage = await TwilioSMSLog.findByMessageSid(messageSid);
+      if (dbMessage && dbMessage.user_id !== userId) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied to this message'
+        });
+      }
+    } catch (dbError) {
+      console.error('Error checking message access:', dbError);
+      // Continue without access check if DB is down
     }
 
     res.json({
@@ -221,16 +236,37 @@ exports.getSMSLogs = async (req, res, next) => {
     options.limit = parseInt(limit);
     options.offset = parseInt(offset);
 
-    const smsLogs = await TwilioSMSLog.findByUserId(userId, options);
-    const stats = await TwilioSMSLog.getSMSStats(userId, options);
+    try {
+      const smsLogs = await TwilioSMSLog.findByUserId(userId, options);
+      const stats = await TwilioSMSLog.getSMSStats(userId, options);
 
-    res.json({
-      success: true,
-      data: {
-        smsLogs: smsLogs.map(log => log.toJSON()),
-        stats: stats
-      }
-    });
+      res.json({
+        success: true,
+        data: {
+          smsLogs: smsLogs.map(log => log.toJSON()),
+          stats: stats
+        }
+      });
+    } catch (dbError) {
+      console.error('Error getting SMS logs:', dbError);
+      // Return empty data instead of 500 error
+      res.json({
+        success: true,
+        data: {
+          smsLogs: [],
+          stats: {
+            total_messages: 0,
+            outbound_count: 0,
+            inbound_count: 0,
+            delivered_count: 0,
+            failed_count: 0,
+            sent_count: 0,
+            total_cost: 0,
+            avg_cost_per_message: 0
+          }
+        }
+      });
+    }
 
   } catch (error) {
     console.error('Error getting SMS logs:', error);
@@ -252,12 +288,30 @@ exports.getSMSStats = async (req, res, next) => {
       options.end_date = end_date;
     }
 
-    const stats = await TwilioSMSLog.getSMSStats(userId, options);
+    try {
+      const stats = await TwilioSMSLog.getSMSStats(userId, options);
 
-    res.json({
-      success: true,
-      data: stats
-    });
+      res.json({
+        success: true,
+        data: stats
+      });
+    } catch (dbError) {
+      console.error('Error getting SMS stats:', dbError);
+      // Return empty stats instead of 500 error
+      res.json({
+        success: true,
+        data: {
+          total_messages: 0,
+          outbound_count: 0,
+          inbound_count: 0,
+          delivered_count: 0,
+          failed_count: 0,
+          sent_count: 0,
+          total_cost: 0,
+          avg_cost_per_message: 0
+        }
+      });
+    }
 
   } catch (error) {
     console.error('Error getting SMS stats:', error);

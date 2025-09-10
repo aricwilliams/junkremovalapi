@@ -1,5 +1,4 @@
-const mysql = require('mysql2/promise');
-const config = require('../config/database');
+const db = require('../config/database');
 
 class TwilioSMSLog {
   constructor(data) {
@@ -27,8 +26,6 @@ class TwilioSMSLog {
    */
   static async create(data) {
     try {
-      const connection = await mysql.createConnection(config);
-      
       const query = `
         INSERT INTO twilio_sms_logs (
           user_id, message_sid, to_number, from_number, body, 
@@ -54,9 +51,7 @@ class TwilioSMSLog {
         data.date_updated || new Date()
       ];
       
-      const [result] = await connection.execute(query, values);
-      await connection.end();
-      
+      const result = await db.query(query, values);
       return result.insertId;
     } catch (error) {
       console.error('Error creating SMS log:', error);
@@ -69,11 +64,8 @@ class TwilioSMSLog {
    */
   static async findByMessageSid(messageSid) {
     try {
-      const connection = await mysql.createConnection(config);
-      
       const query = 'SELECT * FROM twilio_sms_logs WHERE message_sid = ?';
-      const [rows] = await connection.execute(query, [messageSid]);
-      await connection.end();
+      const rows = await db.query(query, [messageSid]);
       
       return rows.length > 0 ? new TwilioSMSLog(rows[0]) : null;
     } catch (error) {
@@ -87,8 +79,6 @@ class TwilioSMSLog {
    */
   static async findByUserId(userId, options = {}) {
     try {
-      const connection = await mysql.createConnection(config);
-      
       let query = 'SELECT * FROM twilio_sms_logs WHERE user_id = ?';
       const values = [userId];
       
@@ -126,9 +116,7 @@ class TwilioSMSLog {
         }
       }
       
-      const [rows] = await connection.execute(query, values);
-      await connection.end();
-      
+      const rows = await db.query(query, values);
       return rows.map(row => new TwilioSMSLog(row));
     } catch (error) {
       console.error('Error finding SMS logs by user ID:', error);
@@ -141,22 +129,19 @@ class TwilioSMSLog {
    */
   static async updateStatus(messageSid, status, errorCode = null, errorMessage = null) {
     try {
-      const connection = await mysql.createConnection(config);
-      
       const query = `
         UPDATE twilio_sms_logs 
         SET status = ?, error_code = ?, error_message = ?, updated_at = NOW()
         WHERE message_sid = ?
       `;
       
-      const [result] = await connection.execute(query, [
+      const result = await db.query(query, [
         status,
         errorCode,
         errorMessage,
         messageSid
       ]);
       
-      await connection.end();
       return result.affectedRows > 0;
     } catch (error) {
       console.error('Error updating SMS log status:', error);
@@ -169,8 +154,6 @@ class TwilioSMSLog {
    */
   static async getSMSStats(userId, options = {}) {
     try {
-      const connection = await mysql.createConnection(config);
-      
       let query = `
         SELECT 
           COUNT(*) as total_messages,
@@ -192,9 +175,7 @@ class TwilioSMSLog {
         values.push(options.start_date, options.end_date);
       }
       
-      const [rows] = await connection.execute(query, values);
-      await connection.end();
-      
+      const rows = await db.query(query, values);
       return rows[0];
     } catch (error) {
       console.error('Error getting SMS stats:', error);
@@ -207,8 +188,6 @@ class TwilioSMSLog {
    */
   static async getConversations(userId, limit = 20) {
     try {
-      const connection = await mysql.createConnection(config);
-      
       const query = `
         SELECT 
           to_number,
@@ -223,9 +202,7 @@ class TwilioSMSLog {
         LIMIT ?
       `;
       
-      const [rows] = await connection.execute(query, [userId, limit]);
-      await connection.end();
-      
+      const rows = await db.query(query, [userId, limit]);
       return rows;
     } catch (error) {
       console.error('Error getting SMS conversations:', error);

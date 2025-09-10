@@ -14,13 +14,17 @@ class Database {
     
     this.pool = mysql.createPool({
       host: process.env.DB_HOST || 'switchyard.proxy.rlwy.net',
-      port: process.env.DB_PORT || 20553,
+      port: Number(process.env.DB_PORT) || 20553,
       user: process.env.DB_USERNAME || 'root',
       password: process.env.DB_PASSWORD || 'mmmGPUfMVK...',
       database: process.env.DB_DATABASE || 'junkremoval',
       waitForConnections: true,
       connectionLimit: 10,
-      queueLimit: 0
+      queueLimit: 0,
+      ssl: { 
+        rejectUnauthorized: true,
+        minVersion: 'TLSv1.2'
+      }
     });
     
     // Test connection on initialization

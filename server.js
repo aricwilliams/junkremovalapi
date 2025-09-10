@@ -133,6 +133,28 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Database health check endpoint
+app.get('/db/health', async (req, res) => {
+  try {
+    const db = require('./config/database');
+    const [rows] = await db.pool.query('SELECT 1 as ok');
+    res.json({ 
+      success: true,
+      database: 'connected',
+      ok: rows[0].ok === 1,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Database health check failed:', error);
+    res.status(500).json({ 
+      success: false,
+      database: 'disconnected',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // API routes - only include what exists
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/customers', customerRoutes);
