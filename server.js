@@ -8,6 +8,16 @@ require('dotenv').config();
 const { errorHandler } = require('./middleware/errorHandler');
 const { notFound } = require('./middleware/notFound');
 
+// ✨ origins should be only scheme + host (+ optional port), no paths
+const allowlist = [
+  'https://junkremovalappplanner.com',
+  'https://www.junkremovalappplanner.com',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173'
+];
+
 // Import only the routes that exist
 const authRoutes = require('./routes/auth');
 const customerRoutes = require('./routes/customers');
@@ -32,46 +42,33 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Security middleware
-app.use(helmet());
-
 // CORS configuration
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://junkremovalappplanner.com/tool'] 
-    : process.env.ALLOW_ALL_ORIGINS === 'true'
-      ? true  // Allow all origins in development (use with caution)
-      : [
-          'http://localhost:3000',
-          'http://localhost:3001', 
-          'http://localhost:5173',  // Vite default
-          'http://localhost:8080',  // Vue CLI default
-          'http://localhost:4200',  // Angular default
-          'http://127.0.0.1:3000',
-          'http://127.0.0.1:3001',
-          'http://127.0.0.1:5173',
-          'http://127.0.0.1:8080',
-          'http://127.0.0.1:4200'
-        ],
+  origin: function (origin, callback) {
+    // allow non-browser tools (no Origin header) like curl/postman
+    if (!origin) return callback(null, true);
+
+    if (allowlist.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked for origin: ${origin}`), false);
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization','X-Requested-With'],
+  optionsSuccessStatus: 204
 };
 
-// Log CORS configuration in development
-if (process.env.NODE_ENV !== 'production') {
-  console.log('🔧 CORS Configuration:', {
-    allowAllOrigins: process.env.ALLOW_ALL_ORIGINS === 'true',
-    allowedOrigins: corsOptions.origin === true ? 'ALL' : corsOptions.origin,
-    credentials: corsOptions.credentials,
-    methods: corsOptions.methods
-  });
-}
-
+// 👉 CORS FIRST
 app.use(cors(corsOptions));
-
-// Handle preflight requests
+// allow Express to answer preflight automatically for all routes
 app.options('*', cors(corsOptions));
+
+// THEN security headers
+app.use(helmet({
+  crossOriginResourcePolicy: false, // don't block cross-origin fetches for APIs
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }
+}));
 
 
 // Body parsing middleware
