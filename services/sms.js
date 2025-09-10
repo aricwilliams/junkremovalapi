@@ -28,7 +28,9 @@ async function sendSMS(to, body, from = null) {
     }
 
     // Add status callback for delivery tracking
-    params.statusCallback = `${config.twilio.serverUrl}/webhooks/twilio/status`;
+    // params.statusCallback = `${config.twilio.serverUrl}/webhooks/twilio/status`;
+    params.statusCallback = `https://junkremovalapi.onrender.com/webhooks/twilio/status`;
+
     params.statusCallbackMethod = 'POST';
 
     console.log('📱 Sending SMS:', { to, body: body.substring(0, 50) + '...' });
