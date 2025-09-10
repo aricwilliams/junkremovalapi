@@ -22,8 +22,7 @@ class Database {
       connectionLimit: 10,
       queueLimit: 0,
       ssl: { 
-        rejectUnauthorized: true,
-        minVersion: 'TLSv1.2'
+        rejectUnauthorized: false
       }
     });
     
