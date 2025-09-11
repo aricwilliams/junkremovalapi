@@ -44,6 +44,7 @@ const twilioRoutes = require('./routes/twilio');
 const callForwardingRoutes = require('./routes/callForwarding');
 const smsRoutes = require('./routes/sms');
 const smsWebhookRoutes = require('./routes/smsWebhooks');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 const PORT = config.server.port;
@@ -161,6 +162,7 @@ app.use('/api/v1/customers', customerRoutes);
 app.use('/api/v1/employees', employeeRoutes);
 app.use('/api/v1/estimates', estimateRoutes);
 app.use('/api/v1/jobs', jobRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/twilio', twilioRoutes);
 app.use('/api/call-forwarding', callForwardingRoutes);
 app.use('/api/sms', smsRoutes);
@@ -199,6 +201,7 @@ const startServer = async () => {
       console.log(`👷 Employees: ${baseUrl}/api/v1/employees`);
       console.log(`💰 Estimates: ${baseUrl}/api/v1/estimates`);
       console.log(`💼 Jobs: ${baseUrl}/api/v1/jobs`);
+      console.log(`🔔 Notifications: ${baseUrl}/api/v1/notifications`);
       console.log(`📞 Twilio: ${baseUrl}/api/twilio`);
       console.log(`📱 Call Forwarding: ${baseUrl}/api/call-forwarding`);
       console.log(`💬 SMS: ${baseUrl}/api/sms`);

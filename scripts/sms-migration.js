@@ -7,7 +7,13 @@ async function createSMSLogsTable() {
   try {
     console.log('🔧 Creating SMS logs table...');
     
-    connection = await mysql.createConnection(config.database);
+    connection = await mysql.createConnection({
+      ...config.database,
+      ssl: { 
+        rejectUnauthorized: false,
+        checkServerIdentity: () => undefined
+      }
+    });
     
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS twilio_sms_logs (
