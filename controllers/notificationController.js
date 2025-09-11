@@ -1,7 +1,7 @@
 const db = require('../config/database');
 
 /**
- * Create a new notification
+ * Create or update a notification (upsert - one per business)
  */
 const createNotification = async (req, res, next) => {
   try {
@@ -28,30 +28,59 @@ const createNotification = async (req, res, next) => {
       });
     }
 
-    // Insert new notification
-    const result = await db.query(
-      'INSERT INTO notifications (business_id, google_review_link) VALUES (?, ?)',
-      [businessId, google_review_link]
+    // Check if notification already exists for this business
+    const existingNotifications = await db.query(
+      'SELECT * FROM notifications WHERE business_id = ?',
+      [businessId]
     );
 
-    const notificationId = result.insertId;
+    let notification;
+    let message;
 
-    // Get the created notification
-    const newNotification = await db.query(
-      'SELECT * FROM notifications WHERE id = ?',
-      [notificationId]
-    );
+    if (existingNotifications.length > 0) {
+      // Update existing notification
+      await db.query(
+        'UPDATE notifications SET google_review_link = ?, updated_at = CURRENT_TIMESTAMP WHERE business_id = ?',
+        [google_review_link, businessId]
+      );
+
+      // Get the updated notification
+      const updatedNotifications = await db.query(
+        'SELECT * FROM notifications WHERE business_id = ?',
+        [businessId]
+      );
+
+      notification = updatedNotifications[0];
+      message = 'Notification updated successfully';
+    } else {
+      // Insert new notification
+      const result = await db.query(
+        'INSERT INTO notifications (business_id, google_review_link) VALUES (?, ?)',
+        [businessId, google_review_link]
+      );
+
+      const notificationId = result.insertId;
+
+      // Get the created notification
+      const newNotifications = await db.query(
+        'SELECT * FROM notifications WHERE id = ?',
+        [notificationId]
+      );
+
+      notification = newNotifications[0];
+      message = 'Notification created successfully';
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Notification created successfully',
+      message: message,
       data: {
-        notification: newNotification[0]
+        notification: notification
       }
     });
 
   } catch (error) {
-    console.error('Error creating notification:', error);
+    console.error('Error creating/updating notification:', error);
     next(error);
   }
 };
@@ -64,24 +93,39 @@ const getNotifications = async (req, res, next) => {
     const businessId = req.user.id;
     const { limit = 50, offset = 0, sort = 'created_at', order = 'DESC' } = req.query;
 
+    // Parse and validate inputs
+    const businessIdNum = Number(businessId);
+    const limitRaw = Number(limit);
+    const offsetRaw = Number(offset);
+    
+    const limitNum = Math.min(Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 50), 100);
+    const offsetNum = Math.max(0, Number.isFinite(offsetRaw) ? offsetRaw : 0);
+
+    if (!Number.isFinite(businessIdNum)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid business_id' 
+      });
+    }
+
     // Validate sort field
     const allowedSortFields = ['id', 'created_at', 'updated_at'];
     const sortField = allowedSortFields.includes(sort) ? sort : 'created_at';
     const sortOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
-    // Get notifications with pagination
+    // Get notifications with pagination - inline sanitized integers
     const notifications = await db.query(
       `SELECT * FROM notifications 
        WHERE business_id = ? 
        ORDER BY ${sortField} ${sortOrder} 
-       LIMIT ? OFFSET ?`,
-      [businessId, parseInt(limit), parseInt(offset)]
+       LIMIT ${limitNum} OFFSET ${offsetNum}`,
+      [businessIdNum]
     );
 
     // Get total count for pagination
     const countResult = await db.query(
       'SELECT COUNT(*) as total FROM notifications WHERE business_id = ?',
-      [businessId]
+      [businessIdNum]
     );
 
     const total = countResult[0].total;
@@ -92,9 +136,9 @@ const getNotifications = async (req, res, next) => {
         notifications: notifications,
         pagination: {
           total: total,
-          limit: parseInt(limit),
-          offset: parseInt(offset),
-          hasMore: (parseInt(offset) + parseInt(limit)) < total
+          limit: limitNum,
+          offset: offsetNum,
+          hasMore: (offsetNum + limitNum) < total
         }
       }
     });

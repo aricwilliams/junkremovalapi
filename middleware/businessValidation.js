@@ -36,6 +36,14 @@ const signupSchema = Joi.object({
     'string.pattern.base': 'Business zip code must be a valid US zip code',
     'any.required': 'Business zip code is required'
   }),
+  website_url: Joi.string().uri().max(512).optional().allow('').messages({
+    'string.uri': 'Website URL must be a valid URL',
+    'string.max': 'Website URL cannot exceed 512 characters'
+  }),
+  logo_url: Joi.string().uri().max(1024).optional().allow('').messages({
+    'string.uri': 'Logo URL must be a valid URL',
+    'string.max': 'Logo URL cannot exceed 1024 characters'
+  }),
 
   // Owner Information
   owner_first_name: Joi.string().min(2).max(100).required().messages({

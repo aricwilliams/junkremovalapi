@@ -13,6 +13,8 @@ const signup = async (req, res, next) => {
       business_city,
       business_state,
       business_zip_code,
+      website_url,
+      logo_url,
       owner_first_name,
       owner_last_name,
       owner_email,
@@ -48,14 +50,14 @@ const signup = async (req, res, next) => {
     const result = await db.query(
       `INSERT INTO businesses (
         business_name, business_phone, business_address, business_city, 
-        business_state, business_zip_code, owner_first_name, owner_last_name, 
-        owner_email, owner_phone, username, password_hash, license_number, 
-        insurance_number, service_radius, number_of_trucks, years_in_business
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        business_state, business_zip_code, website_url, logo_url, owner_first_name, 
+        owner_last_name, owner_email, owner_phone, username, password_hash, 
+        license_number, insurance_number, service_radius, number_of_trucks, years_in_business
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         business_name, business_phone, business_address, business_city,
-        business_state, business_zip_code, owner_first_name, owner_last_name,
-        owner_email, owner_phone, username, password_hash, 
+        business_state, business_zip_code, website_url || null, logo_url || null,
+        owner_first_name, owner_last_name, owner_email, owner_phone, username, password_hash, 
         license_number || null, insurance_number || null, 
         service_radius || null, number_of_trucks || null, years_in_business || null
       ]
@@ -66,8 +68,8 @@ const signup = async (req, res, next) => {
     // Get the created business (without password)
     const newBusiness = await db.query(
       `SELECT id, business_name, business_phone, business_address, business_city, 
-       business_state, business_zip_code, owner_first_name, owner_last_name, 
-       owner_email, owner_phone, username, user_type, status, created_at,
+       business_state, business_zip_code, website_url, logo_url, owner_first_name, 
+       owner_last_name, owner_email, owner_phone, username, user_type, status, created_at,
        license_number, insurance_number, service_radius, number_of_trucks, 
        years_in_business FROM businesses WHERE id = ?`,
       [businessId]
@@ -119,9 +121,9 @@ const login = async (req, res, next) => {
     // Find business by username or email
     const business = await db.query(
       `SELECT id, business_name, business_phone, business_address, business_city, 
-       business_state, business_zip_code, owner_first_name, owner_last_name, 
-       owner_email, owner_phone, username, password_hash, user_type, status, 
-       created_at, last_login, license_number, insurance_number, service_radius, 
+       business_state, business_zip_code, website_url, logo_url, owner_first_name, 
+       owner_last_name, owner_email, owner_phone, username, password_hash, user_type, 
+       status, created_at, last_login, license_number, insurance_number, service_radius, 
        number_of_trucks, years_in_business FROM businesses 
        WHERE username = ? OR owner_email = ?`,
       [username, username]
@@ -210,8 +212,8 @@ const getProfile = async (req, res, next) => {
 
     const business = await db.query(
       `SELECT id, business_name, business_phone, business_address, business_city, 
-       business_state, business_zip_code, owner_first_name, owner_last_name, 
-       owner_email, owner_phone, username, user_type, status, created_at, 
+       business_state, business_zip_code, website_url, logo_url, owner_first_name, 
+       owner_last_name, owner_email, owner_phone, username, user_type, status, created_at, 
        last_login, license_number, insurance_number, service_radius, 
        number_of_trucks, years_in_business FROM businesses WHERE id = ?`,
       [businessId]
@@ -253,9 +255,9 @@ const updateProfile = async (req, res, next) => {
     // Build dynamic update query
     const allowedFields = [
       'business_name', 'business_phone', 'business_address', 'business_city',
-      'business_state', 'business_zip_code', 'owner_first_name', 'owner_last_name',
-      'owner_phone', 'license_number', 'insurance_number', 'service_radius',
-      'number_of_trucks', 'years_in_business'
+      'business_state', 'business_zip_code', 'website_url', 'logo_url', 
+      'owner_first_name', 'owner_last_name', 'owner_phone', 'license_number', 
+      'insurance_number', 'service_radius', 'number_of_trucks', 'years_in_business'
     ];
 
     const updateFields = [];
@@ -286,8 +288,8 @@ const updateProfile = async (req, res, next) => {
     // Get updated business data
     const updatedBusiness = await db.query(
       `SELECT id, business_name, business_phone, business_address, business_city, 
-       business_state, business_zip_code, owner_first_name, owner_last_name, 
-       owner_email, owner_phone, username, user_type, status, created_at, 
+       business_state, business_zip_code, website_url, logo_url, owner_first_name, 
+       owner_last_name, owner_email, owner_phone, username, user_type, status, created_at, 
        last_login, license_number, insurance_number, service_radius, 
        number_of_trucks, years_in_business FROM businesses WHERE id = ?`,
       [businessId]

@@ -45,6 +45,7 @@ const callForwardingRoutes = require('./routes/callForwarding');
 const smsRoutes = require('./routes/sms');
 const smsWebhookRoutes = require('./routes/smsWebhooks');
 const notificationRoutes = require('./routes/notifications');
+const uploadRoutes = require('./routes/uploads');
 
 const app = express();
 const PORT = config.server.port;
@@ -163,6 +164,7 @@ app.use('/api/v1/employees', employeeRoutes);
 app.use('/api/v1/estimates', estimateRoutes);
 app.use('/api/v1/jobs', jobRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/uploads', uploadRoutes);
 app.use('/api/twilio', twilioRoutes);
 app.use('/api/call-forwarding', callForwardingRoutes);
 app.use('/api/sms', smsRoutes);

@@ -13,13 +13,7 @@ const validateNotification = [
     })
     .withMessage('Google review link must be a valid URL with http or https protocol')
     .isLength({ max: 500 })
-    .withMessage('Google review link must not exceed 500 characters')
-    .custom((value) => {
-      if (value && !value.includes('google.com')) {
-        throw new Error('Google review link should be a Google URL');
-      }
-      return true;
-    }),
+    .withMessage('Google review link must not exceed 500 characters'),
 
   // Handle validation errors
   (req, res, next) => {
@@ -55,13 +49,7 @@ const validateNotificationCreation = [
     })
     .withMessage('Google review link must be a valid URL with http or https protocol')
     .isLength({ max: 500 })
-    .withMessage('Google review link must not exceed 500 characters')
-    .custom((value) => {
-      if (!value.includes('google.com')) {
-        throw new Error('Google review link should be a Google URL');
-      }
-      return true;
-    }),
+    .withMessage('Google review link must not exceed 500 characters'),
 
   // Handle validation errors
   (req, res, next) => {
@@ -96,13 +84,7 @@ const validateNotificationUpdate = [
     })
     .withMessage('Google review link must be a valid URL with http or https protocol')
     .isLength({ max: 500 })
-    .withMessage('Google review link must not exceed 500 characters')
-    .custom((value) => {
-      if (value && !value.includes('google.com')) {
-        throw new Error('Google review link should be a Google URL');
-      }
-      return true;
-    }),
+    .withMessage('Google review link must not exceed 500 characters'),
 
   // Ensure at least one field is provided for update
   body().custom((value) => {
