@@ -150,27 +150,29 @@ const validateUpload = (req, res, next) => {
     });
   }
   
-  // Parse JSON fields if they exist
+  // Parse JSON fields if they exist using safe parsing
+  const { safeParseJSON } = require('../utils/safeJson');
+  
   if (req.body.tags && typeof req.body.tags === 'string') {
-    try {
-      req.body.tags = JSON.parse(req.body.tags);
-    } catch (e) {
+    const parsedTags = safeParseJSON(req.body.tags, null);
+    if (parsedTags === null) {
       return res.status(400).json({
         success: false,
         message: 'Invalid tags format. Must be valid JSON array.'
       });
     }
+    req.body.tags = parsedTags;
   }
   
   if (req.body.metadata && typeof req.body.metadata === 'string') {
-    try {
-      req.body.metadata = JSON.parse(req.body.metadata);
-    } catch (e) {
+    const parsedMetadata = safeParseJSON(req.body.metadata, null);
+    if (parsedMetadata === null) {
       return res.status(400).json({
         success: false,
         message: 'Invalid metadata format. Must be valid JSON object.'
       });
     }
+    req.body.metadata = parsedMetadata;
   }
   
   next();

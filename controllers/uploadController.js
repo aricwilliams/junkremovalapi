@@ -25,12 +25,13 @@ const uploadFile = async (req, res, next) => {
     }
 
     // Process upload
+    const { safeParseJSON } = require('../utils/safeJson');
     const upload = await UploadService.processFileUpload(file, req.user.id, {
       title: body.title || file.originalname,
       description: body.description || '',
-      tags: body.tags ? JSON.parse(body.tags) : [],
+      tags: safeParseJSON(body.tags, []),
       is_public: body.is_public === 'true',
-      metadata: body.metadata ? JSON.parse(body.metadata) : {}
+      metadata: safeParseJSON(body.metadata, {})
     });
 
     res.status(201).json({
@@ -73,12 +74,13 @@ const uploadMultipleFiles = async (req, res, next) => {
     }
 
     // Process multiple uploads
+    const { safeParseJSON } = require('../utils/safeJson');
     const result = await UploadService.processMultipleFileUploads(files, req.user.id, {
       title: body.title || 'Multiple Files',
       description: body.description || '',
-      tags: body.tags ? JSON.parse(body.tags) : [],
+      tags: safeParseJSON(body.tags, []),
       is_public: body.is_public === 'true',
-      metadata: body.metadata ? JSON.parse(body.metadata) : {}
+      metadata: safeParseJSON(body.metadata, {})
     });
 
     res.status(201).json({

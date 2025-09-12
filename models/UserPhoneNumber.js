@@ -191,7 +191,9 @@ class UserPhoneNumber {
       purchase_price: this.purchase_price,
       purchase_price_unit: this.purchase_price_unit,
       monthly_cost: this.monthly_cost,
-      capabilities: this.capabilities ? (typeof this.capabilities === 'string' ? JSON.parse(this.capabilities) : this.capabilities) : null,
+      capabilities: this.capabilities ? (typeof this.capabilities === 'string' ? (() => {
+        try { return JSON.parse(this.capabilities); } catch { return this.capabilities; }
+      })() : this.capabilities) : null,
       created_at: this.created_at,
       updated_at: this.updated_at
     };
