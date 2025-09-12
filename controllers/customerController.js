@@ -115,20 +115,7 @@ const createCustomer = async (req, res, next) => {
       status = 'new'
     } = req.body;
 
-    // Check if customer with same email already exists for this business
-    const existingCustomer = await db.query(
-      'SELECT id FROM customers WHERE email = ? AND business_id = ?',
-      [email, businessId]
-    );
-
-    if (existingCustomer.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Customer with this email already exists',
-        error: 'CUSTOMER_EXISTS',
-        timestamp: new Date().toISOString()
-      });
-    }
+    // Allow customers with same email to exist
 
     const result = await db.query(
       `INSERT INTO customers (
@@ -183,22 +170,7 @@ const updateCustomer = async (req, res, next) => {
       });
     }
 
-    // If email is being updated, check for duplicates
-    if (updateData.email) {
-      const duplicateCustomer = await db.query(
-        'SELECT id FROM customers WHERE email = ? AND business_id = ? AND id != ?',
-        [updateData.email, businessId, customerId]
-      );
-
-      if (duplicateCustomer.length > 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Customer with this email already exists',
-          error: 'CUSTOMER_EXISTS',
-          timestamp: new Date().toISOString()
-        });
-      }
-    }
+    // Allow customers with same email to exist
 
     // Build dynamic update query
     const allowedFields = [
