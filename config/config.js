@@ -111,5 +111,14 @@ module.exports = {
     messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
     fromNumber: process.env.TWILIO_FROM_NUMBER,
     serverUrl: getServerUrl()
+  },
+
+  // SEO Rankings configuration
+  seo: {
+    opencageApiKey: process.env.OPENCAGE_API_KEY,
+    // serpapiKey is now managed through the database via seoApiKeyService
+    rateLimitDelay: parseInt(process.env.SEO_RATE_LIMIT_DELAY) || 250, // milliseconds between API calls
+    maxGridSize: process.env.SEO_MAX_GRID_SIZE || '21x21',
+    timeout: parseInt(process.env.SEO_API_TIMEOUT) || 30000 // 30 seconds
   }
 };

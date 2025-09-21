@@ -26,7 +26,8 @@
         "migrate:client-portal": "node scripts/client-portal-migration.js",
         "migrate:db": "node scripts/client-portal-migration.js",
         "migrate:twilio": "node scripts/twilio-migration.js",
-        "test:twilio": "node test-twilio-api.js"
+        "test:twilio": "node test-twilio-api.js",
+        "migrate:heatmap": "node scripts/create-heatmap-table.js"
     },
     "keywords": [
         "junk-removal",

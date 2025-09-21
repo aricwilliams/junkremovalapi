@@ -21,6 +21,7 @@ const getCorsAllowlist = () => {
       ...baseAllowlist,
       config.server.devUrl,
       'http://localhost:5173',
+      'http://localhost:5175',
       'http://127.0.0.1:3000',
       'http://127.0.0.1:5173'
     ];
@@ -48,6 +49,7 @@ const smsWebhookRoutes = require('./routes/smsWebhooks');
 const notificationRoutes = require('./routes/notifications');
 const uploadRoutes = require('./routes/uploads');
 const announcementRoutes = require('./routes/announcements');
+const seoRoutes = require('./routes/seo');
 
 const app = express();
 const PORT = config.server.port;
@@ -169,6 +171,7 @@ app.use('/api/v1/jobs', jobRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/uploads', uploadRoutes);
 app.use('/api/v1/announcements', announcementRoutes);
+app.use('/api/seo', seoRoutes);
 app.use('/api/twilio', twilioRoutes);
 app.use('/api/call-forwarding', callForwardingRoutes);
 app.use('/api/sms', smsRoutes);
@@ -209,6 +212,7 @@ const startServer = async () => {
       console.log(`💼 Jobs: ${baseUrl}/api/v1/jobs`);
       console.log(`🔔 Notifications: ${baseUrl}/api/v1/notifications`);
       console.log(`📢 Announcements: ${baseUrl}/api/v1/announcements`);
+      console.log(`🔍 SEO Rankings: ${baseUrl}/api/seo`);
       console.log(`📞 Twilio: ${baseUrl}/api/twilio`);
       console.log(`📱 Call Forwarding: ${baseUrl}/api/call-forwarding`);
       console.log(`💬 SMS: ${baseUrl}/api/sms`);
